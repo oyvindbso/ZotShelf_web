@@ -1,0 +1,162 @@
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+  padding: 20px;
+}
+
+.login-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 40px;
+  max-width: 500px;
+  width: 100%;
+}
+
+.login-card h2 {
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.login-description {
+  color: #666;
+  margin-bottom: 30px;
+  line-height: 1.6;
+}
+
+.login-description a {
+  color: #667eea;
+  text-decoration: none;
+}
+
+.login-description a:hover {
+  text-decoration: underline;
+}
+
+.form-group {
+  margin-bottom: 25px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #333;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e1e8ed;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: border-color 0.3s;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.form-group small {
+  display: block;
+  margin-top: 6px;
+  color: #888;
+  font-size: 13px;
+}
+
+.login-button {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.login-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.login-button:active {
+  transform: translateY(0);
+}
+
+.help-section {
+  margin-top: 30px;
+  padding-top: 30px;
+  border-top: 1px solid #e1e8ed;
+}
+
+.help-section h3 {
+  font-size: 16px;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.help-section ol {
+  padding-left: 20px;
+  color: #666;
+  line-height: 1.8;
+}
+
+.help-section a {
+  color: #667eea;
+  text-decoration: none;
+}
+
+.help-section a:hover {
+  text-decoration: underline;
+}
+
+@media (prefers-color-scheme: dark) {
+  .login-card {
+    background: #2a2a2a;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  }
+
+  .login-card h2 {
+    color: #fff;
+  }
+
+  .login-description {
+    color: #aaa;
+  }
+
+  .form-group label {
+    color: #fff;
+  }
+
+  .form-group input {
+    background: #1a1a1a;
+    border-color: #444;
+    color: #fff;
+  }
+
+  .form-group input:focus {
+    border-color: #667eea;
+  }
+
+  .form-group small {
+    color: #888;
+  }
+
+  .help-section {
+    border-top-color: #444;
+  }
+
+  .help-section h3 {
+    color: #fff;
+  }
+
+  .help-section ol {
+    color: #aaa;
+  }
+}

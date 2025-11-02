@@ -7,6 +7,7 @@ A web application that displays your Zotero collection as a beautiful grid of bo
 - 🔐 Secure Zotero OAuth authentication
 - 📚 Browse collections and filter by tags
 - 🖼️ Automatic cover extraction from PDFs and EPUBs
+- 🔗 Click covers to open items directly in Zotero app
 - 📱 Responsive grid layout
 - ☁️ Deployed on Netlify
 
@@ -60,6 +61,7 @@ VITE_ZOTERO_CLIENT_SECRET=your_client_secret
 2. Select a collection from the dropdown
 3. Optionally filter by tags
 4. View your collection as a grid of covers
+5. Click on any cover to open the item in your Zotero desktop app
 
 ## Technologies
 

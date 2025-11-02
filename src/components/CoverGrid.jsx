@@ -44,8 +44,18 @@ function CoverItem({ item, userId, apiKey }) {
     return item.data.title || item.data.filename || 'Untitled'
   }
 
+  const getZoteroLink = () => {
+    // For attachments, link to the parent item; otherwise link to the item itself
+    const itemKey = item.data.parentItem || item.key
+    return `zotero://select/library/items/${itemKey}`
+  }
+
   return (
-    <div className="cover-item">
+    <a
+      href={getZoteroLink()}
+      className="cover-item"
+      title={`Open "${getTitle()}" in Zotero`}
+    >
       <div className="cover-image-container">
         {loading && (
           <div className="cover-loading">
@@ -64,7 +74,7 @@ function CoverItem({ item, userId, apiKey }) {
         )}
       </div>
       <div className="cover-title">{getTitle()}</div>
-    </div>
+    </a>
   )
 }
 

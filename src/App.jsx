@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react'
 import './App.css'
+import OAuthLogin from './components/OAuthLogin'
 import CollectionSelector from './components/CollectionSelector'
 import CoverGrid from './components/CoverGrid'
 import { getCollections, getItemsInCollection, getItemsByTag } from './services/zotero'
-
-// Get credentials from environment variables
-const ZOTERO_USER_ID = import.meta.env.VITE_ZOTERO_USER_ID
-const ZOTERO_API_KEY = import.meta.env.VITE_ZOTERO_API_KEY
+import { exchangeOAuthToken, getStoredAuth, storeAuth, clearAuth, isAuthenticated } from './services/oauth'
 
 function App() {
+  const [authenticated, setAuthenticated] = useState(false)
+  const [userId, setUserId] = useState(null)
+  const [apiKey, setApiKey] = useState(null)
+  const [username, setUsername] = useState(null)
   const [collections, setCollections] = useState([])
   const [selectedCollection, setSelectedCollection] = useState(null)
   const [selectedTag, setSelectedTag] = useState('')
@@ -17,19 +19,83 @@ function App() {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    // Check if credentials are configured
-    if (!ZOTERO_USER_ID || !ZOTERO_API_KEY) {
-      setError('Zotero credentials not configured. Please set VITE_ZOTERO_USER_ID and VITE_ZOTERO_API_KEY in your .env file.')
-      return
+    // Check for OAuth callback
+    const urlParams = new URLSearchParams(window.location.search)
+    const oauthToken = urlParams.get('oauth_token')
+    const oauthVerifier = urlParams.get('oauth_verifier')
+
+    if (oauthToken && oauthVerifier) {
+      handleOAuthCallback(oauthToken, oauthVerifier)
+    } else {
+      // Check if already authenticated
+      if (isAuthenticated()) {
+        const auth = getStoredAuth()
+        setUserId(auth.userId)
+        setApiKey(auth.accessToken)
+        setUsername(auth.username)
+        setAuthenticated(true)
+        loadCollections(auth.userId, auth.accessToken)
+      }
     }
-    loadCollections()
   }, [])
 
-  const loadCollections = async () => {
+  const handleOAuthCallback = async (oauthToken, oauthVerifier) => {
     try {
       setLoading(true)
       setError(null)
-      const collections = await getCollections(ZOTERO_USER_ID, ZOTERO_API_KEY)
+
+      // Get stored token secret
+      const oauthTokenSecret = localStorage.getItem('oauth_token_secret')
+      if (!oauthTokenSecret) {
+        throw new Error('OAuth session expired. Please try again.')
+      }
+
+      // Exchange tokens for access token
+      const { accessToken, accessTokenSecret, userId, username } = await exchangeOAuthToken(
+        oauthToken,
+        oauthVerifier,
+        oauthTokenSecret
+      )
+
+      // Store auth data
+      storeAuth(accessToken, userId, username)
+
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname)
+
+      // Update state
+      setUserId(userId)
+      setApiKey(accessToken)
+      setUsername(username)
+      setAuthenticated(true)
+
+      // Load collections
+      await loadCollections(userId, accessToken)
+
+    } catch (err) {
+      setError('Authentication failed: ' + err.message)
+      clearAuth()
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleLogout = () => {
+    clearAuth()
+    setAuthenticated(false)
+    setUserId(null)
+    setApiKey(null)
+    setUsername(null)
+    setCollections([])
+    setSelectedCollection(null)
+    setItems([])
+  }
+
+  const loadCollections = async (uid, key) => {
+    try {
+      setLoading(true)
+      setError(null)
+      const collections = await getCollections(uid || userId, key || apiKey)
       setCollections(collections)
     } catch (err) {
       setError('Failed to load collections: ' + err.message)
@@ -45,9 +111,9 @@ function App() {
 
       let items
       if (tag) {
-        items = await getItemsByTag(ZOTERO_USER_ID, ZOTERO_API_KEY, tag, collectionKey)
+        items = await getItemsByTag(userId, apiKey, tag, collectionKey)
       } else if (collectionKey) {
-        items = await getItemsInCollection(ZOTERO_USER_ID, ZOTERO_API_KEY, collectionKey)
+        items = await getItemsInCollection(userId, apiKey, collectionKey)
       }
 
       // Filter for items that have attachments (PDFs or EPUBs)
@@ -80,6 +146,23 @@ function App() {
     }
   }
 
+  if (!authenticated) {
+    return (
+      <div className="app">
+        <div className="app-header">
+          <h1>ZotShelf</h1>
+          <p>Your Zotero library, beautifully displayed</p>
+        </div>
+        {error && <div className="error-message">{error}</div>}
+        {loading ? (
+          <div className="loading">Authenticating</div>
+        ) : (
+          <OAuthLogin />
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="app">
       <div className="app-header">
@@ -89,26 +172,24 @@ function App() {
       <div className="container">
         {error && <div className="error-message">{error}</div>}
 
-        {!error && (
-          <>
-            <CollectionSelector
-              collections={collections}
-              selectedCollection={selectedCollection}
-              onCollectionSelect={handleCollectionSelect}
-              onTagSelect={handleTagSelect}
-              selectedTag={selectedTag}
-            />
+        <CollectionSelector
+          collections={collections}
+          selectedCollection={selectedCollection}
+          onCollectionSelect={handleCollectionSelect}
+          onTagSelect={handleTagSelect}
+          selectedTag={selectedTag}
+          onLogout={handleLogout}
+          username={username}
+        />
 
-            {loading && <div className="loading">Loading</div>}
+        {loading && <div className="loading">Loading</div>}
 
-            {!loading && items.length > 0 && (
-              <CoverGrid items={items} userId={ZOTERO_USER_ID} apiKey={ZOTERO_API_KEY} />
-            )}
+        {!loading && items.length > 0 && (
+          <CoverGrid items={items} userId={userId} apiKey={apiKey} />
+        )}
 
-            {!loading && items.length === 0 && selectedCollection && (
-              <div className="loading">No items with PDF or EPUB attachments found in this collection</div>
-            )}
-          </>
+        {!loading && items.length === 0 && selectedCollection && (
+          <div className="loading">No items with PDF or EPUB attachments found in this collection</div>
         )}
       </div>
     </div>

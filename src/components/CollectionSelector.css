@@ -18,6 +18,13 @@
   color: #333;
 }
 
+.username {
+  margin: 5px 0 0 0;
+  font-size: 14px;
+  color: #666;
+  font-weight: normal;
+}
+
 .logout-button {
   padding: 8px 20px;
   background: transparent;

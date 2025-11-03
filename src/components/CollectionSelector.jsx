@@ -6,8 +6,7 @@ function CollectionSelector({
   selectedCollection,
   onCollectionSelect,
   onTagSelect,
-  selectedTag,
-  onLogout
+  selectedTag
 }) {
   const [tagInput, setTagInput] = useState('')
 
@@ -33,9 +32,6 @@ function CollectionSelector({
     <div className="selector-container">
       <div className="selector-header">
         <h2>Browse Your Library</h2>
-        <button onClick={onLogout} className="logout-button">
-          Logout
-        </button>
       </div>
 
       <div className="selector-controls">

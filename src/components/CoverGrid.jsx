@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import './CoverGrid.css'
 import { extractCoverFromPDF, extractCoverFromEPUB } from '../utils/coverExtractor'
 
-function CoverItem({ item, userId, apiKey, displayFormat }) {
+function CoverItem({ item, userId, apiKey, displayFormat, username, linkType }) {
   const [coverUrl, setCoverUrl] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -72,9 +72,14 @@ function CoverItem({ item, userId, apiKey, displayFormat }) {
   }
 
   const getZoteroLink = () => {
-    // Use open-pdf to open the PDF/EPUB directly in Zotero's reader
-    // Link to the attachment (not the parent item)
-    return `zotero://open-pdf/library/items/${item.attachment.key}`
+    if (linkType === 'web') {
+      // Link to web library - view the parent item
+      return `https://www.zotero.org/${username}/items/${item.key}`
+    } else {
+      // Use open-pdf to open the PDF/EPUB directly in Zotero's reader
+      // Link to the attachment (not the parent item)
+      return `zotero://open-pdf/library/items/${item.attachment.key}`
+    }
   }
 
   return (
@@ -105,7 +110,7 @@ function CoverItem({ item, userId, apiKey, displayFormat }) {
   )
 }
 
-function CoverGrid({ items, userId, apiKey }) {
+function CoverGrid({ items, userId, apiKey, username, linkType }) {
   const [displayFormat, setDisplayFormat] = useState('author-title')
 
   return (
@@ -136,6 +141,8 @@ function CoverGrid({ items, userId, apiKey }) {
             userId={userId}
             apiKey={apiKey}
             displayFormat={displayFormat}
+            username={username}
+            linkType={linkType}
           />
         ))}
       </div>

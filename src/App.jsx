@@ -17,8 +17,9 @@ function App() {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [viewMode, setViewMode] = useState('selection') // 'selection' or 'grid'
+  const [viewMode, setViewMode] = useState('selection') // 'selection', 'grid', or 'info'
   const [showSettings, setShowSettings] = useState(false)
+  const [linkType, setLinkType] = useState('app') // 'app' or 'web'
 
   useEffect(() => {
     // Check for OAuth callback
@@ -265,6 +266,72 @@ function App() {
     )
   }
 
+  // Info/About page
+  if (viewMode === 'info') {
+    return (
+      <div className="app">
+        <div className="app-header">
+          <h1>ZotShelf</h1>
+          <p>Your Zotero library, beautifully displayed</p>
+        </div>
+        <div className="info-page">
+          <div className="info-content">
+            <button onClick={() => setViewMode('grid')} className="back-button">
+              ← Back to Grid
+            </button>
+
+            <h2>About ZotShelf</h2>
+            <p>
+              ZotShelf is a web application that provides a beautiful grid view of your Zotero library.
+              It extracts cover images from PDF and EPUB files in your collections and displays them
+              in an easy-to-browse format.
+            </p>
+
+            <h3>Features</h3>
+            <ul>
+              <li>OAuth authentication with Zotero</li>
+              <li>Browse collections with hierarchical tree view</li>
+              <li>Filter items by tags</li>
+              <li>Automatic cover extraction from PDF and EPUB files</li>
+              <li>Customizable display formats (Author-Title, Author Only, Title Only)</li>
+              <li>Toggle between Zotero app links and web library links</li>
+              <li>Persistent collection selection</li>
+            </ul>
+
+            <h3>How to Use</h3>
+            <ol>
+              <li>Log in with your Zotero account</li>
+              <li>Select a collection and optionally filter by tag</li>
+              <li>Click "View Collection" to see your book covers</li>
+              <li>Click any cover to open it in Zotero (app or web, based on your settings)</li>
+              <li>Use the Settings button to change collections or preferences</li>
+            </ol>
+
+            <h3>Link Types</h3>
+            <p>
+              <strong>Zotero App:</strong> Opens PDFs directly in the Zotero desktop application's built-in reader.
+            </p>
+            <p>
+              <strong>Web Library:</strong> Opens the item in your Zotero web library where you can view details and access files.
+            </p>
+
+            <h3>Technology</h3>
+            <p>
+              Built with React and Vite, deployed on Netlify. Uses Zotero Web API v3,
+              PDF.js for PDF rendering, and JSZip for EPUB processing.
+            </p>
+
+            <div className="info-footer">
+              <button onClick={() => setViewMode('grid')} className="primary-button">
+                Return to Grid View
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   // Grid view - display covers with settings option
   return (
     <div className="app grid-view">
@@ -280,6 +347,12 @@ function App() {
           )}
         </div>
         <div className="header-right">
+          <button onClick={() => setViewMode('info')} className="info-button">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+            </svg>
+            Info
+          </button>
           <button onClick={() => setShowSettings(!showSettings)} className="settings-button">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
               <path d="M17.43 10.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C12.46 2.18 12.25 2 12 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM10 13c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3z"/>
@@ -308,6 +381,27 @@ function App() {
               selectedTag={selectedTag}
               compact={true}
             />
+
+            <div className="link-type-toggle">
+              <label>
+                <span>Link Type:</span>
+                <div className="toggle-group">
+                  <button
+                    className={linkType === 'app' ? 'active' : ''}
+                    onClick={() => setLinkType('app')}
+                  >
+                    Zotero App
+                  </button>
+                  <button
+                    className={linkType === 'web' ? 'active' : ''}
+                    onClick={() => setLinkType('web')}
+                  >
+                    Web Library
+                  </button>
+                </div>
+              </label>
+            </div>
+
             <div className="settings-actions">
               <button onClick={handleViewCollection} className="apply-button">
                 Apply Changes
@@ -327,7 +421,7 @@ function App() {
         {loading && <div className="loading">Loading</div>}
 
         {!loading && items.length > 0 && (
-          <CoverGrid items={items} userId={userId} apiKey={apiKey} />
+          <CoverGrid items={items} userId={userId} apiKey={apiKey} username={username} linkType={linkType} />
         )}
 
         {!loading && items.length === 0 && (

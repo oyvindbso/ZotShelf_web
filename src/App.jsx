@@ -97,6 +97,17 @@ function App() {
       setError(null)
       const collections = await getCollections(uid || userId, key || apiKey)
       setCollections(collections)
+
+      // Restore previously selected collection
+      const savedCollectionKey = localStorage.getItem('selected_collection_key')
+      if (savedCollectionKey) {
+        const savedCollection = collections.find(c => c.key === savedCollectionKey)
+        if (savedCollection) {
+          setSelectedCollection(savedCollection)
+          // Load items for this collection
+          loadItems(savedCollection.key)
+        }
+      }
     } catch (err) {
       setError('Failed to load collections: ' + err.message)
     } finally {
@@ -156,8 +167,13 @@ function App() {
   const handleCollectionSelect = (collection) => {
     setSelectedCollection(collection)
     setSelectedTag('')
+
+    // Save to localStorage
     if (collection) {
+      localStorage.setItem('selected_collection_key', collection.key)
       loadItems(collection.key)
+    } else {
+      localStorage.removeItem('selected_collection_key')
     }
   }
 

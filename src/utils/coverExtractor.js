@@ -9,6 +9,8 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.j
  */
 export async function extractCoverFromPDF(fileUrl, apiKey) {
   try {
+    console.log('Fetching PDF from:', fileUrl)
+
     // Fetch the PDF file
     const response = await fetch(fileUrl, {
       headers: {
@@ -17,11 +19,16 @@ export async function extractCoverFromPDF(fileUrl, apiKey) {
       }
     })
 
+    console.log('PDF fetch response status:', response.status)
+
     if (!response.ok) {
-      throw new Error('Failed to fetch PDF')
+      const errorText = await response.text()
+      console.error('PDF fetch failed:', response.status, errorText)
+      throw new Error(`Failed to fetch PDF: ${response.status}`)
     }
 
     const arrayBuffer = await response.arrayBuffer()
+    console.log('PDF downloaded, size:', arrayBuffer.byteLength)
 
     // Load the PDF
     const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer })
@@ -56,6 +63,8 @@ export async function extractCoverFromPDF(fileUrl, apiKey) {
  */
 export async function extractCoverFromEPUB(fileUrl, apiKey) {
   try {
+    console.log('Fetching EPUB from:', fileUrl)
+
     // Fetch the EPUB file
     const response = await fetch(fileUrl, {
       headers: {
@@ -64,11 +73,16 @@ export async function extractCoverFromEPUB(fileUrl, apiKey) {
       }
     })
 
+    console.log('EPUB fetch response status:', response.status)
+
     if (!response.ok) {
-      throw new Error('Failed to fetch EPUB')
+      const errorText = await response.text()
+      console.error('EPUB fetch failed:', response.status, errorText)
+      throw new Error(`Failed to fetch EPUB: ${response.status}`)
     }
 
     const arrayBuffer = await response.arrayBuffer()
+    console.log('EPUB downloaded, size:', arrayBuffer.byteLength)
 
     // Load the EPUB as a ZIP file
     const zip = await JSZip.loadAsync(arrayBuffer)

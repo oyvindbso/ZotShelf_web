@@ -29,7 +29,12 @@ export const handler = async (event) => {
       url: 'https://www.zotero.org/oauth/request',
       method: 'POST',
       data: {
-        oauth_callback: callbackUrl
+        oauth_callback: callbackUrl,
+        name: 'ZotShelf',
+        library_access: 1,  // Read library data
+        notes_access: 0,    // No notes access needed
+        write_access: 0,    // Read-only access
+        all_groups: 'read'  // Read access to all groups
       }
     };
 

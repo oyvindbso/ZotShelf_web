@@ -8,14 +8,18 @@ const ZOTERO_API_BASE = 'https://api.zotero.org'
 /**
  * Makes a request to the Zotero API
  */
-async function zoteroRequest(endpoint, apiKey) {
+async function zoteroRequest(endpoint, apiKey, options = {}) {
   const url = `${ZOTERO_API_BASE}${endpoint}`
   const headers = {
     'Zotero-API-Version': '3',
-    'Zotero-API-Key': apiKey
+    'Zotero-API-Key': apiKey,
+    ...options.headers
   }
 
-  const response = await fetch(url, { headers })
+  const response = await fetch(url, {
+    ...options,
+    headers
+  })
 
   if (!response.ok) {
     throw new Error(`Zotero API error: ${response.status} ${response.statusText}`)
@@ -25,10 +29,30 @@ async function zoteroRequest(endpoint, apiKey) {
 }
 
 /**
- * Get all collections for a user
+ * Get all collections for a user with pagination
  */
 export async function getCollections(userId, apiKey) {
-  return zoteroRequest(`/users/${userId}/collections`, apiKey)
+  let allCollections = []
+  let start = 0
+  const limit = 100
+
+  while (true) {
+    const collections = await zoteroRequest(
+      `/users/${userId}/collections?start=${start}&limit=${limit}`,
+      apiKey
+    )
+
+    allCollections = allCollections.concat(collections)
+
+    // If we got fewer items than the limit, we've reached the end
+    if (collections.length < limit) {
+      break
+    }
+
+    start += limit
+  }
+
+  return allCollections
 }
 
 /**

@@ -72,8 +72,9 @@ function CoverItem({ item, userId, apiKey, displayFormat }) {
   }
 
   const getZoteroLink = () => {
-    // Link to the parent item
-    return `zotero://select/library/items/${item.key}`
+    // Use open-pdf to open the PDF/EPUB directly in Zotero's reader
+    // Link to the attachment (not the parent item)
+    return `zotero://open-pdf/library/items/${item.attachment.key}`
   }
 
   return (

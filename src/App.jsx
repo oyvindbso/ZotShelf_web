@@ -3,7 +3,7 @@ import './App.css'
 import OAuthLogin from './components/OAuthLogin'
 import CollectionSelector from './components/CollectionSelector'
 import CoverGrid from './components/CoverGrid'
-import { getCollections, getItemsInCollection, getItemsByTag } from './services/zotero'
+import { getCollections, getItemsInCollection, getItemsByTag, getItemChildren } from './services/zotero'
 import { exchangeOAuthToken, getStoredAuth, storeAuth, clearAuth, isAuthenticated } from './services/oauth'
 
 function App() {
@@ -109,19 +109,41 @@ function App() {
       setLoading(true)
       setError(null)
 
-      let items
+      let topLevelItems
       if (tag) {
-        items = await getItemsByTag(userId, apiKey, tag, collectionKey)
+        topLevelItems = await getItemsByTag(userId, apiKey, tag, collectionKey)
       } else if (collectionKey) {
-        items = await getItemsInCollection(userId, apiKey, collectionKey)
+        topLevelItems = await getItemsInCollection(userId, apiKey, collectionKey)
       }
 
-      // Filter for items that have attachments (PDFs or EPUBs)
-      const itemsWithAttachments = items.filter(item => {
-        return item.data.itemType === 'attachment' &&
-               (item.data.contentType === 'application/pdf' ||
-                item.data.contentType === 'application/epub+zip')
-      })
+      // Filter for regular items (not attachments or notes)
+      const regularItems = topLevelItems.filter(item =>
+        item.data.itemType !== 'attachment' && item.data.itemType !== 'note'
+      )
+
+      // For each item, fetch its children and find PDF/EPUB attachments
+      const itemsWithAttachments = []
+      for (const item of regularItems) {
+        try {
+          const children = await getItemChildren(userId, apiKey, item.key)
+          const pdfEpubAttachments = children.filter(child =>
+            child.data.itemType === 'attachment' &&
+            (child.data.contentType === 'application/pdf' ||
+             child.data.contentType === 'application/epub+zip')
+          )
+
+          // If this item has PDF/EPUB attachments, add it with the first attachment
+          if (pdfEpubAttachments.length > 0) {
+            itemsWithAttachments.push({
+              ...item,
+              attachment: pdfEpubAttachments[0], // Use first PDF/EPUB found
+              allAttachments: pdfEpubAttachments // Store all for potential future use
+            })
+          }
+        } catch (err) {
+          console.error(`Error fetching children for item ${item.key}:`, err)
+        }
+      }
 
       setItems(itemsWithAttachments)
     } catch (err) {

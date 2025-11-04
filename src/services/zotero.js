@@ -35,7 +35,21 @@ export async function getCollections(userId, apiKey) {
  * Get items in a specific collection
  */
 export async function getItemsInCollection(userId, apiKey, collectionKey) {
-  return zoteroRequest(`/users/${userId}/collections/${collectionKey}/items`, apiKey)
+  return zoteroRequest(`/users/${userId}/collections/${collectionKey}/items/top`, apiKey)
+}
+
+/**
+ * Get child items (attachments, notes) for a specific item
+ */
+export async function getItemChildren(userId, apiKey, itemKey) {
+  return zoteroRequest(`/users/${userId}/items/${itemKey}/children`, apiKey)
+}
+
+/**
+ * Get a specific item
+ */
+export async function getItem(userId, apiKey, itemKey) {
+  return zoteroRequest(`/users/${userId}/items/${itemKey}`, apiKey)
 }
 
 /**

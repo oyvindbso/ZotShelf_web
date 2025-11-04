@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import './CoverGrid.css'
 import { extractCoverFromPDF, extractCoverFromEPUB } from '../utils/coverExtractor'
 
-function CoverItem({ item, userId, apiKey }) {
+function CoverItem({ item, userId, apiKey, displayFormat }) {
   const [coverUrl, setCoverUrl] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -16,9 +16,11 @@ function CoverItem({ item, userId, apiKey }) {
       setLoading(true)
       setError(false)
 
-      const fileUrl = `https://api.zotero.org/users/${userId}/items/${item.key}/file`
-      const isPDF = item.data.contentType === 'application/pdf'
-      const isEPUB = item.data.contentType === 'application/epub+zip'
+      // Use the attachment for the cover
+      const attachment = item.attachment
+      const fileUrl = `https://api.zotero.org/users/${userId}/items/${attachment.key}/file`
+      const isPDF = attachment.data.contentType === 'application/pdf'
+      const isEPUB = attachment.data.contentType === 'application/epub+zip'
 
       let cover
       if (isPDF) {
@@ -40,21 +42,45 @@ function CoverItem({ item, userId, apiKey }) {
     }
   }
 
-  const getTitle = () => {
-    return item.data.title || item.data.filename || 'Untitled'
+  const getAuthors = () => {
+    const creators = item.data.creators || []
+    const authors = creators.filter(c => c.creatorType === 'author')
+    if (authors.length === 0) return null
+
+    if (authors.length === 1) {
+      return `${authors[0].lastName || authors[0].name || ''}`
+    } else if (authors.length === 2) {
+      return `${authors[0].lastName || authors[0].name} & ${authors[1].lastName || authors[1].name}`
+    } else {
+      return `${authors[0].lastName || authors[0].name} et al.`
+    }
+  }
+
+  const getDisplayText = () => {
+    const title = item.data.title || 'Untitled'
+    const authors = getAuthors()
+
+    switch (displayFormat) {
+      case 'author':
+        return authors || title
+      case 'title':
+        return title
+      case 'author-title':
+      default:
+        return authors ? `${authors} - ${title}` : title
+    }
   }
 
   const getZoteroLink = () => {
-    // For attachments, link to the parent item; otherwise link to the item itself
-    const itemKey = item.data.parentItem || item.key
-    return `zotero://select/library/items/${itemKey}`
+    // Link to the parent item
+    return `zotero://select/library/items/${item.key}`
   }
 
   return (
     <a
       href={getZoteroLink()}
       className="cover-item"
-      title={`Open "${getTitle()}" in Zotero`}
+      title={`Open "${getDisplayText()}" in Zotero`}
     >
       <div className="cover-image-container">
         {loading && (
@@ -70,23 +96,46 @@ function CoverItem({ item, userId, apiKey }) {
           </div>
         )}
         {coverUrl && !loading && (
-          <img src={coverUrl} alt={getTitle()} className="cover-image" />
+          <img src={coverUrl} alt={getDisplayText()} className="cover-image" />
         )}
       </div>
-      <div className="cover-title">{getTitle()}</div>
+      <div className="cover-title">{getDisplayText()}</div>
     </a>
   )
 }
 
 function CoverGrid({ items, userId, apiKey }) {
+  const [displayFormat, setDisplayFormat] = useState('author-title')
+
   return (
     <div className="cover-grid-container">
       <div className="grid-header">
-        <h3>Found {items.length} item{items.length !== 1 ? 's' : ''}</h3>
+        <div>
+          <h3>Found {items.length} item{items.length !== 1 ? 's' : ''}</h3>
+        </div>
+        <div className="display-format-selector">
+          <label htmlFor="display-format">Display: </label>
+          <select
+            id="display-format"
+            value={displayFormat}
+            onChange={(e) => setDisplayFormat(e.target.value)}
+            className="format-select"
+          >
+            <option value="author-title">Author - Title</option>
+            <option value="author">Author Only</option>
+            <option value="title">Title Only</option>
+          </select>
+        </div>
       </div>
       <div className="cover-grid">
         {items.map((item) => (
-          <CoverItem key={item.key} item={item} userId={userId} apiKey={apiKey} />
+          <CoverItem
+            key={item.key}
+            item={item}
+            userId={userId}
+            apiKey={apiKey}
+            displayFormat={displayFormat}
+          />
         ))}
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import './CollectionSelector.css'
 
 function CollectionSelector({
@@ -11,6 +11,31 @@ function CollectionSelector({
   username
 }) {
   const [tagInput, setTagInput] = useState('')
+
+  // Build collection hierarchy
+  const collectionTree = useMemo(() => {
+    const buildTree = (parentKey = false) => {
+      return collections
+        .filter(c => c.data.parentCollection === parentKey)
+        .sort((a, b) => a.data.name.localeCompare(b.data.name))
+        .map(collection => ({
+          ...collection,
+          children: buildTree(collection.key)
+        }))
+    }
+    return buildTree()
+  }, [collections])
+
+  // Flatten tree for select dropdown with indentation
+  const flattenedCollections = useMemo(() => {
+    const flatten = (tree, depth = 0) => {
+      return tree.flatMap(node => [
+        { ...node, depth },
+        ...flatten(node.children, depth + 1)
+      ])
+    }
+    return flatten(collectionTree)
+  }, [collectionTree])
 
   const handleCollectionChange = (e) => {
     const collectionKey = e.target.value
@@ -54,8 +79,10 @@ function CollectionSelector({
             className="collection-select"
           >
             <option value="">Select a collection...</option>
-            {collections.map((collection) => (
+            {flattenedCollections.map((collection) => (
               <option key={collection.key} value={collection.key}>
+                {'  '.repeat(collection.depth)}
+                {collection.depth > 0 ? '└ ' : ''}
                 {collection.data.name}
               </option>
             ))}

@@ -5,30 +5,50 @@ import JSZip from 'jszip'
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
 
 /**
+ * Fetch file via Netlify Function proxy to avoid CORS issues
+ */
+async function fetchFileViaProxy(userId, itemKey, apiKey) {
+  const proxyUrl = `/.netlify/functions/file-proxy?userId=${userId}&itemKey=${itemKey}&apiKey=${encodeURIComponent(apiKey)}`;
+
+  console.log('Fetching file via proxy:', proxyUrl);
+
+  const response = await fetch(proxyUrl);
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to fetch file via proxy');
+  }
+
+  const result = await response.json();
+
+  // Convert base64 back to ArrayBuffer
+  const binaryString = atob(result.data);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+
+  return bytes.buffer;
+}
+
+/**
  * Extract cover image from PDF (renders first page)
  */
 export async function extractCoverFromPDF(fileUrl, apiKey) {
   try {
-    console.log('Fetching PDF from:', fileUrl)
-
-    // Fetch the PDF file
-    const response = await fetch(fileUrl, {
-      headers: {
-        'Zotero-API-Version': '3',
-        'Zotero-API-Key': apiKey
-      }
-    })
-
-    console.log('PDF fetch response status:', response.status)
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('PDF fetch failed:', response.status, errorText)
-      throw new Error(`Failed to fetch PDF: ${response.status}`)
+    // Extract userId and itemKey from the fileUrl
+    // Format: https://api.zotero.org/users/{userId}/items/{itemKey}/file
+    const urlMatch = fileUrl.match(/users\/(\d+)\/items\/([A-Z0-9]+)\/file/);
+    if (!urlMatch) {
+      throw new Error('Invalid file URL format');
     }
 
-    const arrayBuffer = await response.arrayBuffer()
-    console.log('PDF downloaded, size:', arrayBuffer.byteLength)
+    const [, userId, itemKey] = urlMatch;
+    console.log('Extracting PDF cover for user:', userId, 'item:', itemKey);
+
+    // Fetch via proxy
+    const arrayBuffer = await fetchFileViaProxy(userId, itemKey, apiKey);
+    console.log('PDF downloaded, size:', arrayBuffer.byteLength);
 
     // Load the PDF
     const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer })
@@ -63,26 +83,18 @@ export async function extractCoverFromPDF(fileUrl, apiKey) {
  */
 export async function extractCoverFromEPUB(fileUrl, apiKey) {
   try {
-    console.log('Fetching EPUB from:', fileUrl)
-
-    // Fetch the EPUB file
-    const response = await fetch(fileUrl, {
-      headers: {
-        'Zotero-API-Version': '3',
-        'Zotero-API-Key': apiKey
-      }
-    })
-
-    console.log('EPUB fetch response status:', response.status)
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('EPUB fetch failed:', response.status, errorText)
-      throw new Error(`Failed to fetch EPUB: ${response.status}`)
+    // Extract userId and itemKey from the fileUrl
+    const urlMatch = fileUrl.match(/users\/(\d+)\/items\/([A-Z0-9]+)\/file/);
+    if (!urlMatch) {
+      throw new Error('Invalid file URL format');
     }
 
-    const arrayBuffer = await response.arrayBuffer()
-    console.log('EPUB downloaded, size:', arrayBuffer.byteLength)
+    const [, userId, itemKey] = urlMatch;
+    console.log('Extracting EPUB cover for user:', userId, 'item:', itemKey);
+
+    // Fetch via proxy
+    const arrayBuffer = await fetchFileViaProxy(userId, itemKey, apiKey);
+    console.log('EPUB downloaded, size:', arrayBuffer.byteLength);
 
     // Load the EPUB as a ZIP file
     const zip = await JSZip.loadAsync(arrayBuffer)

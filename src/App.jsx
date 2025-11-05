@@ -110,8 +110,9 @@ function App() {
         const savedCollection = collections.find(c => c.key === savedCollectionKey)
         if (savedCollection) {
           setSelectedCollection(savedCollection)
-          // Load items for this collection
-          loadItems(savedCollection.key)
+          // Load items for this collection and switch to grid view
+          await loadItems(savedCollection.key)
+          setViewMode('grid')
         }
       }
     } catch (err) {
@@ -208,18 +209,20 @@ function App() {
     setShowSettings(false)
   }
 
-  const handleSettingsChange = async (collection, tag) => {
-    setSelectedCollection(collection)
-    setSelectedTag(tag)
-
-    // Save to localStorage
-    if (collection) {
-      localStorage.setItem('selected_collection_key', collection.key)
+  const handleApplySettings = async () => {
+    if (!selectedCollection) {
+      setError('Please select a collection first')
+      return
     }
 
-    // Reload items
-    await loadItems(collection.key, tag)
+    // Close modal immediately for better UX
     setShowSettings(false)
+
+    // Save to localStorage
+    localStorage.setItem('selected_collection_key', selectedCollection.key)
+
+    // Reload items with new selection
+    await loadItems(selectedCollection.key, selectedTag)
   }
 
   if (!authenticated) {
@@ -438,7 +441,7 @@ function App() {
             </div>
 
             <div className="settings-actions">
-              <button onClick={handleViewCollection} className="apply-button">
+              <button onClick={handleApplySettings} className="apply-button">
                 Apply Changes
               </button>
               <button onClick={() => setShowSettings(false)} className="cancel-button">

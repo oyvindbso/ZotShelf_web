@@ -61,7 +61,15 @@ async function fetchFileViaProxy(userId, itemKey, apiKey) {
       const error = await response.json();
       errorMessage = error.error || error.message || errorMessage;
       console.error('Proxy error details:', error);
+
+      // Special handling for file too large errors
+      if (response.status === 413) {
+        throw new Error('FILE_TOO_LARGE');
+      }
     } catch (e) {
+      if (e.message === 'FILE_TOO_LARGE') {
+        throw e;
+      }
       // Failed to parse error as JSON
       const text = await response.text();
       console.error('Proxy error response:', text);

@@ -6,6 +6,7 @@ function CoverItem({ item, userId, apiKey, displayFormat, username, linkType }) 
   const [coverUrl, setCoverUrl] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  const [errorType, setErrorType] = useState(null)
 
   useEffect(() => {
     loadCover()
@@ -96,6 +97,7 @@ function CoverItem({ item, userId, apiKey, displayFormat, username, linkType }) 
     try {
       setLoading(true)
       setError(false)
+      setErrorType(null)
 
       // Check cache first
       const cached = getCachedCover()
@@ -123,10 +125,18 @@ function CoverItem({ item, userId, apiKey, displayFormat, username, linkType }) 
         setCachedCover(cover)
       } else {
         setError(true)
+        setErrorType('NO_COVER')
       }
     } catch (err) {
       console.error('Error loading cover:', err)
       setError(true)
+
+      // Check if it's a file too large error
+      if (err.message === 'FILE_TOO_LARGE') {
+        setErrorType('FILE_TOO_LARGE')
+      } else {
+        setErrorType('UNKNOWN')
+      }
     } finally {
       setLoading(false)
     }
@@ -185,10 +195,19 @@ function CoverItem({ item, userId, apiKey, displayFormat, username, linkType }) 
           </div>
         )}
         {error && !loading && (
-          <div className="cover-error">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
+          <div className={`cover-error ${errorType === 'FILE_TOO_LARGE' ? 'cover-too-large' : ''}`}>
+            {errorType === 'FILE_TOO_LARGE' ? (
+              <>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span className="cover-error-text">File too large</span>
+              </>
+            ) : (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            )}
           </div>
         )}
         {coverUrl && !loading && (

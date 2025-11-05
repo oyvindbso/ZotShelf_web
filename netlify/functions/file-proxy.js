@@ -36,6 +36,22 @@ export const handler = async (event) => {
       };
     }
 
+    // Check file size before downloading (Netlify Functions have 6MB response limit)
+    const contentLength = response.headers.get('content-length');
+    const maxSize = 5 * 1024 * 1024; // 5MB to be safe (leave some room for base64 encoding)
+
+    if (contentLength && parseInt(contentLength) > maxSize) {
+      console.warn(`File too large: ${contentLength} bytes (max ${maxSize})`);
+      return {
+        statusCode: 413,
+        body: JSON.stringify({
+          error: 'File too large',
+          message: `File size (${Math.round(parseInt(contentLength) / 1024 / 1024)}MB) exceeds maximum allowed size (5MB)`,
+          size: parseInt(contentLength)
+        })
+      };
+    }
+
     // Get the file content
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);

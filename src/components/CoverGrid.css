@@ -116,17 +116,36 @@
 
 .cover-error {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 8px;
   width: 100%;
   height: 100%;
   background: #e1e8ed;
   color: #999;
+  padding: 20px;
 }
 
 .cover-error svg {
   width: 60px;
   height: 60px;
+}
+
+.cover-error-text {
+  font-size: 12px;
+  text-align: center;
+  color: #666;
+  font-weight: 500;
+}
+
+.cover-too-large {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.cover-too-large .cover-error-text {
+  color: #856404;
 }
 
 .cover-title {
@@ -182,6 +201,19 @@
   .cover-error {
     background: #444;
     color: #666;
+  }
+
+  .cover-error-text {
+    color: #888;
+  }
+
+  .cover-too-large {
+    background: #5a4a20;
+    color: #ffc107;
+  }
+
+  .cover-too-large .cover-error-text {
+    color: #ffc107;
   }
 
   .cover-title {

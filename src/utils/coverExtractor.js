@@ -5,6 +5,47 @@ import JSZip from 'jszip'
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
 
 /**
+ * Compress image to reduce size for caching
+ */
+async function compressImage(blob, maxWidth = 400) {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const url = URL.createObjectURL(blob)
+
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+
+      // Calculate new dimensions
+      let width = img.width
+      let height = img.height
+
+      if (width > maxWidth) {
+        height = Math.round((height * maxWidth) / width)
+        width = maxWidth
+      }
+
+      // Create canvas and draw compressed image
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+      const ctx = canvas.getContext('2d')
+      ctx.drawImage(img, 0, 0, width, height)
+
+      // Convert to data URL with compression
+      const compressed = canvas.toDataURL('image/jpeg', 0.7)
+      resolve(compressed)
+    }
+
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error('Failed to load image for compression'))
+    }
+
+    img.src = url
+  })
+}
+
+/**
  * Fetch file via Netlify Function proxy to avoid CORS issues
  */
 async function fetchFileViaProxy(userId, itemKey, apiKey) {
@@ -15,8 +56,17 @@ async function fetchFileViaProxy(userId, itemKey, apiKey) {
   const response = await fetch(proxyUrl);
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to fetch file via proxy');
+    let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+    try {
+      const error = await response.json();
+      errorMessage = error.error || error.message || errorMessage;
+      console.error('Proxy error details:', error);
+    } catch (e) {
+      // Failed to parse error as JSON
+      const text = await response.text();
+      console.error('Proxy error response:', text);
+    }
+    throw new Error(`Failed to fetch file via proxy: ${errorMessage}`);
   }
 
   const result = await response.json();
@@ -57,8 +107,9 @@ export async function extractCoverFromPDF(fileUrl, apiKey) {
     // Get the first page
     const page = await pdf.getPage(1)
 
-    // Set up canvas for rendering
-    const viewport = page.getViewport({ scale: 2.0 })
+    // Set up canvas for rendering with lower scale for caching
+    // Use scale 1.5 instead of 2.0 to reduce file size
+    const viewport = page.getViewport({ scale: 1.5 })
     const canvas = document.createElement('canvas')
     const context = canvas.getContext('2d')
     canvas.width = viewport.width
@@ -70,8 +121,8 @@ export async function extractCoverFromPDF(fileUrl, apiKey) {
       viewport: viewport
     }).promise
 
-    // Convert canvas to data URL
-    return canvas.toDataURL('image/jpeg', 0.8)
+    // Convert canvas to data URL with lower quality for smaller file size
+    return canvas.toDataURL('image/jpeg', 0.6)
   } catch (error) {
     console.error('Error extracting PDF cover:', error)
     return null
@@ -183,16 +234,24 @@ export async function extractCoverFromEPUB(fileUrl, apiKey) {
       return null
     }
 
-    // Extract and convert the image to data URL for caching
+    // Extract and compress the image for caching
     const imageData = await zip.file(coverImagePath).async('blob')
 
-    // Convert blob to data URL so it can be cached
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onloadend = () => resolve(reader.result)
-      reader.onerror = reject
-      reader.readAsDataURL(imageData)
-    })
+    // Compress image to reduce cache size
+    try {
+      const compressed = await compressImage(imageData, 400)
+      console.log('EPUB cover compressed for caching')
+      return compressed
+    } catch (compressErr) {
+      console.warn('Failed to compress image, using original:', compressErr)
+      // Fallback to uncompressed if compression fails
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onloadend = () => resolve(reader.result)
+        reader.onerror = reject
+        reader.readAsDataURL(imageData)
+      })
+    }
   } catch (error) {
     console.error('Error extracting EPUB cover:', error)
     return null

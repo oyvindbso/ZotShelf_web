@@ -28,23 +28,39 @@ function CoverItem({ item, userId, apiKey, displayFormat, username, linkType }) 
   }
 
   const setCachedCover = (coverData) => {
+    // Don't cache if data is too large (> 500KB base64)
+    if (coverData.length > 500000) {
+      console.log('Cover too large to cache, skipping')
+      return
+    }
+
     try {
       const cacheKey = getCacheKey()
       localStorage.setItem(cacheKey, coverData)
     } catch (err) {
       // If localStorage is full, try to clear old covers
-      console.error('Error writing to cache:', err)
+      console.warn('Cache full, attempting cleanup...')
       try {
-        clearOldCovers()
+        clearOldCovers(5) // More aggressive - remove 5 oldest
         localStorage.setItem(getCacheKey(), coverData)
+        console.log('Successfully cached after cleanup')
       } catch (retryErr) {
-        console.error('Failed to cache cover after cleanup:', retryErr)
+        // Still failed, clear all covers and try once more
+        console.warn('Still full, clearing all cover cache...')
+        try {
+          clearAllCovers()
+          localStorage.setItem(getCacheKey(), coverData)
+          console.log('Successfully cached after full cleanup')
+        } catch (finalErr) {
+          // Give up - user has too much other data in localStorage
+          console.error('Cannot cache - localStorage full:', finalErr.message)
+        }
       }
     }
   }
 
-  const clearOldCovers = () => {
-    // Remove old cover cache entries (keep last 100)
+  const clearOldCovers = (count = 10) => {
+    // Remove oldest cover cache entries
     const coverKeys = []
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i)
@@ -52,12 +68,28 @@ function CoverItem({ item, userId, apiKey, displayFormat, username, linkType }) 
         coverKeys.push(key)
       }
     }
-    // Remove oldest entries if we have more than 100
-    if (coverKeys.length > 100) {
-      coverKeys.slice(0, coverKeys.length - 100).forEach(key => {
-        localStorage.removeItem(key)
-      })
+
+    // Sort by key (which includes timestamp-like data) and remove oldest
+    coverKeys.sort()
+    const toRemove = Math.min(count, coverKeys.length)
+    console.log(`Removing ${toRemove} old covers from cache`)
+
+    for (let i = 0; i < toRemove; i++) {
+      localStorage.removeItem(coverKeys[i])
     }
+  }
+
+  const clearAllCovers = () => {
+    // Remove all cover cache entries
+    const coverKeys = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key && key.startsWith('cover_')) {
+        coverKeys.push(key)
+      }
+    }
+    console.log(`Clearing all ${coverKeys.length} covers from cache`)
+    coverKeys.forEach(key => localStorage.removeItem(key))
   }
 
   const loadCover = async () => {

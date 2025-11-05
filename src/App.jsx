@@ -19,7 +19,10 @@ function App() {
   const [error, setError] = useState(null)
   const [viewMode, setViewMode] = useState('selection') // 'selection', 'grid', or 'info'
   const [showSettings, setShowSettings] = useState(false)
-  const [linkType, setLinkType] = useState('app') // 'app' or 'web'
+  const [linkType, setLinkType] = useState(() => {
+    // Load saved link type preference
+    return localStorage.getItem('link_type') || 'app'
+  })
 
   useEffect(() => {
     // Check for OAuth callback
@@ -183,6 +186,11 @@ function App() {
     setSelectedTag(tag)
   }
 
+  const handleLinkTypeChange = (type) => {
+    setLinkType(type)
+    localStorage.setItem('link_type', type)
+  }
+
   const handleViewCollection = async () => {
     if (!selectedCollection) {
       setError('Please select a collection first')
@@ -251,6 +259,33 @@ function App() {
             onLogout={handleLogout}
             username={username}
           />
+
+          <div className="link-type-section">
+            <h3>Do you have Zotero installed?</h3>
+            <p>Choose how you want to open your books:</p>
+            <div className="link-type-options">
+              <button
+                className={`link-type-option ${linkType === 'app' ? 'active' : ''}`}
+                onClick={() => handleLinkTypeChange('app')}
+              >
+                <div className="option-icon">💻</div>
+                <div className="option-content">
+                  <strong>Desktop App</strong>
+                  <span>I have Zotero installed on this computer</span>
+                </div>
+              </button>
+              <button
+                className={`link-type-option ${linkType === 'web' ? 'active' : ''}`}
+                onClick={() => handleLinkTypeChange('web')}
+              >
+                <div className="option-icon">🌐</div>
+                <div className="option-content">
+                  <strong>Web Library</strong>
+                  <span>I'm on a mobile device or don't have the app</span>
+                </div>
+              </button>
+            </div>
+          </div>
 
           <div className="action-buttons">
             <button
@@ -388,13 +423,13 @@ function App() {
                 <div className="toggle-group">
                   <button
                     className={linkType === 'app' ? 'active' : ''}
-                    onClick={() => setLinkType('app')}
+                    onClick={() => handleLinkTypeChange('app')}
                   >
                     Zotero App
                   </button>
                   <button
                     className={linkType === 'web' ? 'active' : ''}
-                    onClick={() => setLinkType('web')}
+                    onClick={() => handleLinkTypeChange('web')}
                   >
                     Web Library
                   </button>

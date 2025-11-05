@@ -63,6 +63,89 @@
   }
 }
 
+/* Link type section for selection view */
+.link-type-section {
+  max-width: 800px;
+  margin: 40px auto;
+  padding: 30px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.link-type-section h3 {
+  margin: 0 0 10px 0;
+  font-size: 1.3rem;
+  color: #333;
+}
+
+.link-type-section p {
+  margin: 0 0 20px 0;
+  color: #666;
+  font-size: 1rem;
+}
+
+.link-type-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.link-type-option {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 20px;
+  background: #f8f9fa;
+  border: 3px solid #e1e8ed;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.link-type-option:hover {
+  border-color: #667eea;
+  background: #f0f2ff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
+.link-type-option.active {
+  border-color: #667eea;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.option-icon {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.option-content {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.option-content strong {
+  font-size: 1.1rem;
+  color: #333;
+  display: block;
+}
+
+.option-content span {
+  font-size: 0.9rem;
+  color: #666;
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .link-type-options {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Action buttons for selection view */
 .action-buttons {
   display: flex;
@@ -490,6 +573,39 @@
   }
 
   .loading {
+    color: #aaa;
+  }
+
+  .link-type-section {
+    background: #2a2a2a;
+  }
+
+  .link-type-section h3 {
+    color: #fff;
+  }
+
+  .link-type-section p {
+    color: #aaa;
+  }
+
+  .link-type-option {
+    background: #1a1a1a;
+    border-color: #444;
+  }
+
+  .link-type-option:hover {
+    background: #2a2550;
+  }
+
+  .link-type-option.active {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+  }
+
+  .option-content strong {
+    color: #fff;
+  }
+
+  .option-content span {
     color: #aaa;
   }
 

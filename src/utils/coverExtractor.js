@@ -100,64 +100,99 @@ export async function extractCoverFromEPUB(fileUrl, apiKey) {
     const zip = await JSZip.loadAsync(arrayBuffer)
 
     // Try to find the cover image using common patterns
-    let coverImage = null
+    let coverImagePath = null
 
-    // Common cover image locations/names
-    const coverPatterns = [
-      /cover\.jpe?g$/i,
-      /cover\.png$/i,
-      /cover-image\.jpe?g$/i,
-      /cover-image\.png$/i,
-      /^OEBPS\/cover\.jpe?g$/i,
-      /^OEBPS\/images\/cover\.jpe?g$/i,
-      /^images\/cover\.jpe?g$/i,
-      /^cover\.jpe?g$/i
-    ]
+    // First, try to parse OPF metadata for cover reference (most reliable)
+    coverImagePath = await findCoverInOPF(zip)
+    console.log('Cover from OPF:', coverImagePath)
 
-    // First, try to find cover in META-INF/container.xml or content.opf
-    // For simplicity, we'll search through all files
-    const files = Object.keys(zip.files)
+    // If OPF parsing didn't work, try common naming patterns
+    if (!coverImagePath) {
+      const files = Object.keys(zip.files)
 
-    // Look for files matching cover patterns
-    for (const pattern of coverPatterns) {
-      const match = files.find(file => pattern.test(file))
-      if (match) {
-        coverImage = match
-        break
-      }
-    }
-
-    // If no match found, look for first image in common image folders
-    if (!coverImage) {
-      const imagePatterns = [
-        /\.(jpe?g|png)$/i
+      // Common cover image locations/names (expanded list)
+      const coverPatterns = [
+        /^cover\.jpe?g$/i,
+        /^cover\.png$/i,
+        /^cover\.gif$/i,
+        /^cover-image\.jpe?g$/i,
+        /^cover-image\.png$/i,
+        /^coverimage\.jpe?g$/i,
+        /^OEBPS\/cover\.jpe?g$/i,
+        /^OEBPS\/cover\.png$/i,
+        /^OEBPS\/images\/cover\.jpe?g$/i,
+        /^OEBPS\/images\/cover\.png$/i,
+        /^OEBPS\/Images\/cover\.jpe?g$/i,
+        /^images\/cover\.jpe?g$/i,
+        /^images\/cover\.png$/i,
+        /^Images\/cover\.jpe?g$/i,
+        /\/cover\.jpe?g$/i,
+        /\/cover\.png$/i,
+        /cover.*\.(jpe?g|png)$/i
       ]
 
-      const imageFolders = ['OEBPS/images/', 'images/', 'OEBPS/', '']
-
-      for (const folder of imageFolders) {
-        const imageInFolder = files.find(file =>
-          file.startsWith(folder) &&
-          imagePatterns.some(pattern => pattern.test(file)) &&
-          !file.includes('thumb')
+      // Look for files matching cover patterns
+      for (const pattern of coverPatterns) {
+        const match = files.find(file =>
+          pattern.test(file) && !zip.files[file].dir
         )
-        if (imageInFolder) {
-          coverImage = imageInFolder
+        if (match) {
+          coverImagePath = match
+          console.log('Cover from pattern match:', coverImagePath)
           break
         }
       }
     }
 
-    if (!coverImage) {
+    // If still no match, look for the first image file in common folders
+    if (!coverImagePath) {
+      const files = Object.keys(zip.files)
+      const imageExtensions = /\.(jpe?g|png|gif)$/i
+      const imageFolders = ['OEBPS/images/', 'OEBPS/Images/', 'images/', 'Images/', 'OEBPS/', 'OPS/images/', 'OPS/']
+
+      for (const folder of imageFolders) {
+        const imageInFolder = files.find(file =>
+          file.startsWith(folder) &&
+          imageExtensions.test(file) &&
+          !file.includes('thumb') &&
+          !file.includes('icon') &&
+          !zip.files[file].dir
+        )
+        if (imageInFolder) {
+          coverImagePath = imageInFolder
+          console.log('Cover from folder search:', coverImagePath)
+          break
+        }
+      }
+    }
+
+    // Last resort: find any image file
+    if (!coverImagePath) {
+      const files = Object.keys(zip.files)
+      const imageExtensions = /\.(jpe?g|png|gif)$/i
+      coverImagePath = files.find(file =>
+        imageExtensions.test(file) && !zip.files[file].dir
+      )
+      if (coverImagePath) {
+        console.log('Cover from any image:', coverImagePath)
+      }
+    }
+
+    if (!coverImagePath) {
       console.warn('No cover image found in EPUB')
       return null
     }
 
-    // Extract and convert the image
-    const imageData = await zip.file(coverImage).async('blob')
-    const imageUrl = URL.createObjectURL(imageData)
+    // Extract and convert the image to data URL for caching
+    const imageData = await zip.file(coverImagePath).async('blob')
 
-    return imageUrl
+    // Convert blob to data URL so it can be cached
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onloadend = () => resolve(reader.result)
+      reader.onerror = reject
+      reader.readAsDataURL(imageData)
+    })
   } catch (error) {
     console.error('Error extracting EPUB cover:', error)
     return null
@@ -171,36 +206,95 @@ export async function extractCoverFromEPUB(fileUrl, apiKey) {
 async function findCoverInOPF(zip) {
   try {
     // Find content.opf file
-    const opfFile = Object.keys(zip.files).find(file =>
-      file.endsWith('.opf') || file.includes('content.opf')
+    const files = Object.keys(zip.files)
+    const opfFile = files.find(file =>
+      file.endsWith('.opf') || file.includes('content.opf') || file.includes('package.opf')
     )
 
     if (!opfFile) {
+      console.log('No OPF file found')
       return null
     }
 
+    console.log('Found OPF file:', opfFile)
     const opfContent = await zip.file(opfFile).async('string')
 
     // Parse XML to find cover reference
     const parser = new DOMParser()
     const xmlDoc = parser.parseFromString(opfContent, 'text/xml')
 
-    // Look for cover in metadata
+    // Get the directory of the OPF file for resolving relative paths
+    const opfDir = opfFile.substring(0, opfFile.lastIndexOf('/') + 1)
+
+    // Method 1: Look for cover in metadata with name="cover"
     const metaElements = xmlDoc.getElementsByTagName('meta')
     for (const meta of metaElements) {
       if (meta.getAttribute('name') === 'cover') {
         const coverId = meta.getAttribute('content')
+        console.log('Found cover ID in metadata:', coverId)
 
-        // Find the item with this ID
+        // Find the item with this ID in the manifest
         const items = xmlDoc.getElementsByTagName('item')
         for (const item of items) {
           if (item.getAttribute('id') === coverId) {
-            return item.getAttribute('href')
+            const href = item.getAttribute('href')
+            const coverPath = opfDir + href
+            console.log('Found cover path from manifest:', coverPath)
+
+            // Check if this file exists in the zip
+            if (zip.files[coverPath]) {
+              return coverPath
+            }
+            // Try without the directory prefix
+            if (zip.files[href]) {
+              return href
+            }
           }
         }
       }
     }
 
+    // Method 2: Look for items with properties="cover-image" (EPUB 3)
+    const items = xmlDoc.getElementsByTagName('item')
+    for (const item of items) {
+      const properties = item.getAttribute('properties')
+      if (properties && properties.includes('cover-image')) {
+        const href = item.getAttribute('href')
+        const coverPath = opfDir + href
+        console.log('Found cover-image property:', coverPath)
+
+        if (zip.files[coverPath]) {
+          return coverPath
+        }
+        if (zip.files[href]) {
+          return href
+        }
+      }
+    }
+
+    // Method 3: Look for guide reference type="cover"
+    const references = xmlDoc.getElementsByTagName('reference')
+    for (const ref of references) {
+      const type = ref.getAttribute('type')
+      if (type === 'cover') {
+        const href = ref.getAttribute('href')
+        // This might be an HTML file, we need to parse it for the image
+        console.log('Found cover reference in guide:', href)
+        const coverPath = opfDir + href
+
+        if (href.match(/\.(jpe?g|png|gif)$/i)) {
+          // It's directly an image
+          if (zip.files[coverPath]) {
+            return coverPath
+          }
+          if (zip.files[href]) {
+            return href
+          }
+        }
+      }
+    }
+
+    console.log('No cover found in OPF metadata')
     return null
   } catch (error) {
     console.error('Error parsing OPF:', error)

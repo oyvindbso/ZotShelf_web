@@ -11,10 +11,67 @@ function CoverItem({ item, userId, apiKey, displayFormat, username, linkType }) 
     loadCover()
   }, [item])
 
+  const getCacheKey = () => {
+    // Use attachment key and version for cache key
+    return `cover_${item.attachment.key}_${item.attachment.version}`
+  }
+
+  const getCachedCover = () => {
+    try {
+      const cacheKey = getCacheKey()
+      const cached = localStorage.getItem(cacheKey)
+      return cached
+    } catch (err) {
+      console.error('Error reading from cache:', err)
+      return null
+    }
+  }
+
+  const setCachedCover = (coverData) => {
+    try {
+      const cacheKey = getCacheKey()
+      localStorage.setItem(cacheKey, coverData)
+    } catch (err) {
+      // If localStorage is full, try to clear old covers
+      console.error('Error writing to cache:', err)
+      try {
+        clearOldCovers()
+        localStorage.setItem(getCacheKey(), coverData)
+      } catch (retryErr) {
+        console.error('Failed to cache cover after cleanup:', retryErr)
+      }
+    }
+  }
+
+  const clearOldCovers = () => {
+    // Remove old cover cache entries (keep last 100)
+    const coverKeys = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key && key.startsWith('cover_')) {
+        coverKeys.push(key)
+      }
+    }
+    // Remove oldest entries if we have more than 100
+    if (coverKeys.length > 100) {
+      coverKeys.slice(0, coverKeys.length - 100).forEach(key => {
+        localStorage.removeItem(key)
+      })
+    }
+  }
+
   const loadCover = async () => {
     try {
       setLoading(true)
       setError(false)
+
+      // Check cache first
+      const cached = getCachedCover()
+      if (cached) {
+        setCoverUrl(cached)
+        setLoading(false)
+        return
+      }
 
       // Use the attachment for the cover
       const attachment = item.attachment
@@ -31,6 +88,7 @@ function CoverItem({ item, userId, apiKey, displayFormat, username, linkType }) 
 
       if (cover) {
         setCoverUrl(cover)
+        setCachedCover(cover)
       } else {
         setError(true)
       }
@@ -73,8 +131,8 @@ function CoverItem({ item, userId, apiKey, displayFormat, username, linkType }) 
 
   const getZoteroLink = () => {
     if (linkType === 'web') {
-      // Link to web library - view the parent item
-      return `https://www.zotero.org/${username}/items/${item.key}`
+      // Link to web library reader - open the parent item in reader view
+      return `https://www.zotero.org/${username}/items/${item.key}/reader`
     } else {
       // Use open-pdf to open the PDF/EPUB directly in Zotero's reader
       // Link to the attachment (not the parent item)

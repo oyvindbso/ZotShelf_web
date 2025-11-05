@@ -56,10 +56,30 @@ export async function getCollections(userId, apiKey) {
 }
 
 /**
- * Get items in a specific collection
+ * Get items in a specific collection with pagination
  */
 export async function getItemsInCollection(userId, apiKey, collectionKey) {
-  return zoteroRequest(`/users/${userId}/collections/${collectionKey}/items/top`, apiKey)
+  let allItems = []
+  let start = 0
+  const limit = 100
+
+  while (true) {
+    const items = await zoteroRequest(
+      `/users/${userId}/collections/${collectionKey}/items/top?start=${start}&limit=${limit}`,
+      apiKey
+    )
+
+    allItems = allItems.concat(items)
+
+    // If we got fewer items than the limit, we've reached the end
+    if (items.length < limit) {
+      break
+    }
+
+    start += limit
+  }
+
+  return allItems
 }
 
 /**
@@ -77,16 +97,32 @@ export async function getItem(userId, apiKey, itemKey) {
 }
 
 /**
- * Get items by tag
+ * Get items by tag with pagination
  */
 export async function getItemsByTag(userId, apiKey, tag, collectionKey = null) {
-  let endpoint = `/users/${userId}/items?tag=${encodeURIComponent(tag)}`
+  let allItems = []
+  let start = 0
+  const limit = 100
 
-  if (collectionKey) {
-    endpoint = `/users/${userId}/collections/${collectionKey}/items?tag=${encodeURIComponent(tag)}`
+  while (true) {
+    let endpoint = `/users/${userId}/items?tag=${encodeURIComponent(tag)}&start=${start}&limit=${limit}`
+
+    if (collectionKey) {
+      endpoint = `/users/${userId}/collections/${collectionKey}/items?tag=${encodeURIComponent(tag)}&start=${start}&limit=${limit}`
+    }
+
+    const items = await zoteroRequest(endpoint, apiKey)
+    allItems = allItems.concat(items)
+
+    // If we got fewer items than the limit, we've reached the end
+    if (items.length < limit) {
+      break
+    }
+
+    start += limit
   }
 
-  return zoteroRequest(endpoint, apiKey)
+  return allItems
 }
 
 /**

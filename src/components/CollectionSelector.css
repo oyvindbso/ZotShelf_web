@@ -16,22 +16,23 @@
 .selector-header h2 {
   margin: 0;
   color: #333;
+  font-size: 1.6rem;
 }
 
 .username {
   margin: 5px 0 0 0;
-  font-size: 14px;
+  font-size: 15px;
   color: #666;
   font-weight: normal;
 }
 
 .logout-button {
-  padding: 8px 20px;
+  padding: 10px 22px;
   background: transparent;
   color: #667eea;
   border: 2px solid #667eea;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
@@ -57,14 +58,14 @@
   margin-bottom: 8px;
   font-weight: 600;
   color: #333;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .collection-select {
-  padding: 12px;
+  padding: 13px 14px;
   border: 2px solid #e1e8ed;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 15px;
   font-family: 'Courier New', Courier, monospace;
   background: white;
   cursor: pointer;
@@ -83,7 +84,7 @@
 
 .tag-input {
   flex: 1;
-  padding: 12px;
+  padding: 13px 14px;
   border: 2px solid #e1e8ed;
   border-radius: 8px;
   font-size: 16px;
@@ -102,10 +103,10 @@
 
 .tag-button,
 .clear-tag-button {
-  padding: 12px 24px;
+  padding: 13px 26px;
   border: none;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
@@ -138,11 +139,11 @@
 
 .active-tag {
   margin-top: 10px;
-  padding: 8px 12px;
+  padding: 10px 14px;
   background: #f0f4ff;
   border-left: 3px solid #667eea;
   border-radius: 4px;
-  font-size: 14px;
+  font-size: 15px;
   color: #333;
 }
 

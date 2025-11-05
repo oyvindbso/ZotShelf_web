@@ -221,6 +221,52 @@ function CoverItem({ item, userId, apiKey, displayFormat, username, linkType }) 
 
 function CoverGrid({ items, userId, apiKey, username, linkType }) {
   const [displayFormat, setDisplayFormat] = useState('author-title')
+  const [sortBy, setSortBy] = useState(() => {
+    return localStorage.getItem('sort_by') || 'title'
+  })
+
+  const handleSortChange = (newSort) => {
+    setSortBy(newSort)
+    localStorage.setItem('sort_by', newSort)
+  }
+
+  const getAuthorLastName = (item) => {
+    const creators = item.data.creators || []
+    const authors = creators.filter(c => c.creatorType === 'author')
+    if (authors.length === 0) return 'zzz' // Sort items without authors last
+    return (authors[0].lastName || authors[0].name || 'zzz').toLowerCase()
+  }
+
+  const getYear = (item) => {
+    const date = item.data.date || ''
+    // Extract year from date string (e.g., "2020", "2020-01-01", "January 2020")
+    const yearMatch = date.match(/\d{4}/)
+    return yearMatch ? parseInt(yearMatch[0]) : 9999 // Sort items without year last
+  }
+
+  const getTitle = (item) => {
+    return (item.data.title || 'Untitled').toLowerCase()
+  }
+
+  const sortedItems = [...items].sort((a, b) => {
+    switch (sortBy) {
+      case 'author':
+        const authorA = getAuthorLastName(a)
+        const authorB = getAuthorLastName(b)
+        return authorA.localeCompare(authorB)
+
+      case 'year':
+        const yearA = getYear(a)
+        const yearB = getYear(b)
+        return yearB - yearA // Newest first
+
+      case 'title':
+      default:
+        const titleA = getTitle(a)
+        const titleB = getTitle(b)
+        return titleA.localeCompare(titleB)
+    }
+  })
 
   return (
     <div className="cover-grid-container">
@@ -228,22 +274,37 @@ function CoverGrid({ items, userId, apiKey, username, linkType }) {
         <div>
           <h3>Found {items.length} item{items.length !== 1 ? 's' : ''}</h3>
         </div>
-        <div className="display-format-selector">
-          <label htmlFor="display-format">Display: </label>
-          <select
-            id="display-format"
-            value={displayFormat}
-            onChange={(e) => setDisplayFormat(e.target.value)}
-            className="format-select"
-          >
-            <option value="author-title">Author - Title</option>
-            <option value="author">Author Only</option>
-            <option value="title">Title Only</option>
-          </select>
+        <div className="grid-controls">
+          <div className="display-format-selector">
+            <label htmlFor="sort-by">Sort by: </label>
+            <select
+              id="sort-by"
+              value={sortBy}
+              onChange={(e) => handleSortChange(e.target.value)}
+              className="format-select"
+            >
+              <option value="title">Title</option>
+              <option value="author">Author</option>
+              <option value="year">Year (newest first)</option>
+            </select>
+          </div>
+          <div className="display-format-selector">
+            <label htmlFor="display-format">Display: </label>
+            <select
+              id="display-format"
+              value={displayFormat}
+              onChange={(e) => setDisplayFormat(e.target.value)}
+              className="format-select"
+            >
+              <option value="author-title">Author - Title</option>
+              <option value="author">Author Only</option>
+              <option value="title">Title Only</option>
+            </select>
+          </div>
         </div>
       </div>
       <div className="cover-grid">
-        {items.map((item) => (
+        {sortedItems.map((item) => (
           <CoverItem
             key={item.key}
             item={item}

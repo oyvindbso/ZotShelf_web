@@ -1,5 +1,6 @@
 * {
   font-family: 'Crimson Text', 'Georgia', serif;
+  font-size: 16px;
 }
 
 .app {
@@ -14,7 +15,7 @@
 }
 
 .app-header h1 {
-  font-size: 2.5rem;
+  font-size: 2.8rem;
   margin-bottom: 10px;
   background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
   -webkit-background-clip: text;
@@ -24,7 +25,7 @@
 
 .app-header p {
   color: #666;
-  font-size: 1.1rem;
+  font-size: 1.2rem;
 }
 
 .container {
@@ -80,14 +81,14 @@
 
 .link-type-section h3 {
   margin: 0 0 10px 0;
-  font-size: 1.3rem;
+  font-size: 1.5rem;
   color: #333;
 }
 
 .link-type-section p {
   margin: 0 0 20px 0;
   color: #666;
-  font-size: 1rem;
+  font-size: 1.1rem;
 }
 
 .link-type-options {
@@ -134,13 +135,13 @@
 }
 
 .option-content strong {
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   color: #333;
   display: block;
 }
 
 .option-content span {
-  font-size: 0.9rem;
+  font-size: 1rem;
   color: #666;
   display: block;
 }
@@ -220,7 +221,7 @@
 }
 
 .current-collection {
-  font-size: 14px;
+  font-size: 15px;
   color: #666;
   font-weight: 500;
 }
@@ -231,53 +232,37 @@
   gap: 15px;
 }
 
-.info-button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: transparent;
-  color: #667eea;
-  border: 2px solid #667eea;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.info-button:hover {
-  background: #667eea;
-  color: white;
-}
-
+.dark-mode-toggle,
+.info-button,
 .settings-button {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 16px;
+  padding: 10px 18px;
   background: transparent;
   color: #667eea;
   border: 2px solid #667eea;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
 }
 
+.dark-mode-toggle:hover,
+.info-button:hover,
 .settings-button:hover {
   background: #667eea;
   color: white;
 }
 
 .logout-button-small {
-  padding: 8px 16px;
+  padding: 10px 18px;
   background: transparent;
   color: #999;
   border: 2px solid #ddd;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
@@ -323,7 +308,7 @@
 
 .settings-header h3 {
   margin: 0;
-  font-size: 1.3rem;
+  font-size: 1.5rem;
   color: #333;
 }
 
@@ -355,12 +340,12 @@
 }
 
 .apply-button {
-  padding: 10px 24px;
+  padding: 12px 28px;
   background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
@@ -372,12 +357,12 @@
 }
 
 .cancel-button {
-  padding: 10px 24px;
+  padding: 12px 28px;
   background: transparent;
   color: #666;
   border: 2px solid #ddd;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;

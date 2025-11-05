@@ -174,49 +174,54 @@
   }
 }
 
-@media (prefers-color-scheme: dark) {
-  .grid-header h3 {
-    color: #fff;
-  }
+/* Dark Mode for CoverGrid */
+.dark-mode .grid-header h3 {
+  color: #e8dcc8;
+}
 
-  .display-format-selector label {
-    color: #aaa;
-  }
+.dark-mode .display-format-selector label {
+  color: #a89a7e;
+}
 
-  .format-select {
-    background: #1a1a1a;
-    border-color: #444;
-    color: #fff;
-  }
+.dark-mode .format-select {
+  background: #1a1612;
+  border-color: #3a342a;
+  color: #e8dcc8;
+  font-family: 'Crimson Text', 'Georgia', serif;
+}
 
-  .format-select:focus,
-  .format-select:hover {
-    border-color: #667eea;
-  }
+.dark-mode .format-select:focus,
+.dark-mode .format-select:hover {
+  border-color: #d4af37;
+}
 
-  .cover-image-container {
-    background: #333;
-  }
+.dark-mode .cover-image-container {
+  background: #2a2419;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
 
-  .cover-error {
-    background: #444;
-    color: #666;
-  }
+.dark-mode .cover-item:hover .cover-image-container {
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+}
 
-  .cover-error-text {
-    color: #888;
-  }
+.dark-mode .cover-error {
+  background: #3a342a;
+  color: #666;
+}
 
-  .cover-too-large {
-    background: #5a4a20;
-    color: #ffc107;
-  }
+.dark-mode .cover-error-text {
+  color: #a89a7e;
+}
 
-  .cover-too-large .cover-error-text {
-    color: #ffc107;
-  }
+.dark-mode .cover-too-large {
+  background: #5a4a20;
+  color: #d4af37;
+}
 
-  .cover-title {
-    color: #ddd;
-  }
+.dark-mode .cover-too-large .cover-error-text {
+  color: #d4af37;
+}
+
+.dark-mode .cover-title {
+  color: #e8dcc8;
 }

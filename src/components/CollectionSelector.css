@@ -165,55 +165,86 @@
   }
 }
 
-@media (prefers-color-scheme: dark) {
-  .selector-container {
-    background: #2a2a2a;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-  }
+/* Dark Mode for CollectionSelector */
+.dark-mode .selector-container {
+  background: #252117;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  border: 1px solid #3a342a;
+}
 
-  .selector-header h2 {
-    color: #fff;
-  }
+.dark-mode .selector-header h2 {
+  color: #e8dcc8;
+}
 
-  .control-group label {
-    color: #fff;
-  }
+.dark-mode .username {
+  color: #a89a7e;
+}
 
-  .collection-select {
-    background: #1a1a1a;
-    border-color: #444;
-    color: #fff;
-  }
+.dark-mode .logout-button {
+  color: #d4af37;
+  border-color: #d4af37;
+}
 
-  .collection-select:focus {
-    border-color: #667eea;
-  }
+.dark-mode .logout-button:hover {
+  background: #d4af37;
+  color: #1a1612;
+}
 
-  .tag-input {
-    background: #1a1a1a;
-    border-color: #444;
-    color: #fff;
-  }
+.dark-mode .control-group label {
+  color: #e8dcc8;
+}
 
-  .tag-input:focus {
-    border-color: #667eea;
-  }
+.dark-mode .collection-select {
+  background: #1a1612;
+  border-color: #3a342a;
+  color: #e8dcc8;
+  font-family: 'Crimson Text', 'Georgia', serif;
+}
 
-  .tag-input:disabled {
-    background: #333;
-  }
+.dark-mode .collection-select:focus {
+  border-color: #d4af37;
+}
 
-  .clear-tag-button {
-    background: #333;
-    color: #aaa;
-  }
+.dark-mode .tag-input {
+  background: #1a1612;
+  border-color: #3a342a;
+  color: #e8dcc8;
+}
 
-  .clear-tag-button:hover {
-    background: #444;
-  }
+.dark-mode .tag-input:focus {
+  border-color: #d4af37;
+}
 
-  .active-tag {
-    background: #1a2a3a;
-    color: #fff;
-  }
+.dark-mode .tag-input:disabled {
+  background: #2a2419;
+  color: #666;
+}
+
+.dark-mode .tag-button {
+  background: linear-gradient(45deg, #d4af37 0%, #c9a961 100%);
+  color: #1a1612;
+}
+
+.dark-mode .tag-button:hover:not(:disabled) {
+  box-shadow: 0 4px 12px rgba(212, 175, 55, 0.4);
+}
+
+.dark-mode .clear-tag-button {
+  background: #2a2419;
+  color: #a89a7e;
+}
+
+.dark-mode .clear-tag-button:hover {
+  background: #3a342a;
+  color: #e8dcc8;
+}
+
+.dark-mode .active-tag {
+  background: rgba(212, 175, 55, 0.15);
+  border-left-color: #d4af37;
+  color: #e8dcc8;
+}
+
+.dark-mode .active-tag strong {
+  color: #d4af37;
 }

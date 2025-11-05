@@ -23,6 +23,23 @@ function App() {
     // Load saved link type preference
     return localStorage.getItem('link_type') || 'app'
   })
+  const [itemLimit, setItemLimit] = useState(() => {
+    // Load saved item limit preference
+    return parseInt(localStorage.getItem('item_limit') || '50')
+  })
+  const [darkMode, setDarkMode] = useState(() => {
+    // Load saved dark mode preference
+    return localStorage.getItem('dark_mode') === 'true'
+  })
+
+  useEffect(() => {
+    // Apply dark mode class
+    if (darkMode) {
+      document.documentElement.classList.add('dark-mode')
+    } else {
+      document.documentElement.classList.remove('dark-mode')
+    }
+  }, [darkMode])
 
   useEffect(() => {
     // Check for OAuth callback
@@ -139,9 +156,12 @@ function App() {
         item.data.itemType !== 'attachment' && item.data.itemType !== 'note'
       )
 
+      // Apply item limit (0 means no limit)
+      const limitedItems = itemLimit > 0 ? regularItems.slice(0, itemLimit) : regularItems
+
       // For each item, fetch its children and find PDF/EPUB attachments
       const itemsWithAttachments = []
-      for (const item of regularItems) {
+      for (const item of limitedItems) {
         try {
           const children = await getItemChildren(userId, apiKey, item.key)
           const pdfEpubAttachments = children.filter(child =>
@@ -190,6 +210,17 @@ function App() {
   const handleLinkTypeChange = (type) => {
     setLinkType(type)
     localStorage.setItem('link_type', type)
+  }
+
+  const handleItemLimitChange = (limit) => {
+    setItemLimit(limit)
+    localStorage.setItem('item_limit', limit.toString())
+  }
+
+  const handleDarkModeToggle = () => {
+    const newMode = !darkMode
+    setDarkMode(newMode)
+    localStorage.setItem('dark_mode', newMode.toString())
   }
 
   const handleViewCollection = async () => {
@@ -385,6 +416,17 @@ function App() {
           )}
         </div>
         <div className="header-right">
+          <button onClick={handleDarkModeToggle} className="dark-mode-toggle" title={darkMode ? "Light mode" : "Dark mode"}>
+            {darkMode ? (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0 .39-.39.39-1.03 0-1.41l-1.06-1.06zm1.06-10.96c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06zM7.05 18.36c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06z"/>
+              </svg>
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M9 2c-1.05 0-2.05.16-3 .46 4.06 1.27 7 5.06 7 9.54 0 4.48-2.94 8.27-7 9.54.95.3 1.95.46 3 .46 5.52 0 10-4.48 10-10S14.52 2 9 2z"/>
+              </svg>
+            )}
+          </button>
           <button onClick={() => setViewMode('info')} className="info-button">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
@@ -438,6 +480,22 @@ function App() {
                   </button>
                 </div>
               </label>
+            </div>
+
+            <div className="item-limit-selector">
+              <label>
+                <span>Items to Load:</span>
+                <select value={itemLimit} onChange={(e) => handleItemLimitChange(parseInt(e.target.value))}>
+                  <option value="25">25 items</option>
+                  <option value="50">50 items (default)</option>
+                  <option value="100">100 items</option>
+                  <option value="200">200 items</option>
+                  <option value="0">All items</option>
+                </select>
+              </label>
+              <p className="limit-description">
+                Limiting items improves loading speed. Large collections may be slow with "All items".
+              </p>
             </div>
 
             <div className="settings-actions">

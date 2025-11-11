@@ -551,6 +551,46 @@
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 
+/* Mobile responsive - hide header text on iPhone */
+@media (max-width: 480px) {
+  .grid-view-header {
+    padding: 10px 15px;
+  }
+
+  .header-left h1 {
+    display: none;
+  }
+
+  .current-collection {
+    display: none;
+  }
+
+  .header-right {
+    gap: 8px;
+  }
+
+  .dark-mode-toggle,
+  .info-button,
+  .settings-button {
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+
+  .dark-mode-toggle span,
+  .info-button span {
+    display: none;
+  }
+
+  .logout-button-small {
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+
+  .grid-container-full {
+    padding: 15px;
+  }
+}
+
 @media (prefers-color-scheme: dark) {
   .app-header p {
     color: #aaa;
@@ -750,7 +790,7 @@
 /* Library-themed Dark Mode */
 .dark-mode {
   background: #1a1612;
-  color: #e8dcc8;
+  color: #f5ecd7;
 }
 
 .dark-mode .app {
@@ -765,7 +805,7 @@
 }
 
 .dark-mode .app-header p {
-  color: #a89a7e;
+  color: #c9b896;
 }
 
 .dark-mode .error-message {
@@ -775,7 +815,7 @@
 }
 
 .dark-mode .loading {
-  color: #a89a7e;
+  color: #c9b896;
 }
 
 .dark-mode .link-type-section {
@@ -784,11 +824,11 @@
 }
 
 .dark-mode .link-type-section h3 {
-  color: #e8dcc8;
+  color: #f5ecd7;
 }
 
 .dark-mode .link-type-section p {
-  color: #a89a7e;
+  color: #c9b896;
 }
 
 .dark-mode .link-type-option {
@@ -807,11 +847,11 @@
 }
 
 .dark-mode .option-content strong {
-  color: #e8dcc8;
+  color: #f5ecd7;
 }
 
 .dark-mode .option-content span {
-  color: #a89a7e;
+  color: #c9b896;
 }
 
 .dark-mode .grid-view-header {
@@ -828,7 +868,7 @@
 }
 
 .dark-mode .current-collection {
-  color: #a89a7e;
+  color: #c9b896;
 }
 
 .dark-mode .dark-mode-toggle {
@@ -854,13 +894,13 @@
 }
 
 .dark-mode .logout-button-small {
-  color: #a89a7e;
+  color: #c9b896;
   border-color: #3a342a;
 }
 
 .dark-mode .logout-button-small:hover {
-  border-color: #a89a7e;
-  color: #e8dcc8;
+  border-color: #c9b896;
+  color: #f5ecd7;
 }
 
 .dark-mode .settings-content {
@@ -873,15 +913,15 @@
 }
 
 .dark-mode .settings-header h3 {
-  color: #e8dcc8;
+  color: #f5ecd7;
 }
 
 .dark-mode .close-button {
-  color: #a89a7e;
+  color: #c9b896;
 }
 
 .dark-mode .close-button:hover {
-  color: #e8dcc8;
+  color: #f5ecd7;
 }
 
 .dark-mode .link-type-toggle {
@@ -889,7 +929,7 @@
 }
 
 .dark-mode .link-type-toggle label span {
-  color: #e8dcc8;
+  color: #f5ecd7;
 }
 
 .dark-mode .item-limit-selector {
@@ -897,13 +937,13 @@
 }
 
 .dark-mode .item-limit-selector label span {
-  color: #e8dcc8;
+  color: #f5ecd7;
 }
 
 .dark-mode .item-limit-selector select {
   background: #1a1612;
   border-color: #3a342a;
-  color: #e8dcc8;
+  color: #f5ecd7;
 }
 
 .dark-mode .item-limit-selector select:focus,
@@ -912,7 +952,7 @@
 }
 
 .dark-mode .limit-description {
-  color: #a89a7e;
+  color: #c9b896;
 }
 
 .dark-mode .settings-actions {
@@ -929,17 +969,17 @@
 }
 
 .dark-mode .cancel-button {
-  color: #a89a7e;
+  color: #c9b896;
   border-color: #3a342a;
 }
 
 .dark-mode .cancel-button:hover {
-  border-color: #a89a7e;
-  color: #e8dcc8;
+  border-color: #c9b896;
+  color: #f5ecd7;
 }
 
 .dark-mode .empty-state p {
-  color: #a89a7e;
+  color: #c9b896;
 }
 
 .dark-mode .change-collection-button,
@@ -967,7 +1007,7 @@
 .dark-mode .info-content p,
 .dark-mode .info-content ul,
 .dark-mode .info-content ol {
-  color: #a89a7e;
+  color: #c9b896;
 }
 
 .dark-mode .info-footer {

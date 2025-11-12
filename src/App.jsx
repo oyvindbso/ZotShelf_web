@@ -12,9 +12,21 @@ function App() {
   const [apiKey, setApiKey] = useState(null)
   const [username, setUsername] = useState(null)
   const [collections, setCollections] = useState([])
-  const [selectedCollection, setSelectedCollection] = useState(null)
-  const [selectedTag, setSelectedTag] = useState('')
-  const [items, setItems] = useState([])
+
+  // Tabs state - each tab represents a collection view
+  const [tabs, setTabs] = useState(() => {
+    // Load saved tabs from localStorage
+    const savedTabs = localStorage.getItem('zotshelf_tabs')
+    return savedTabs ? JSON.parse(savedTabs) : []
+  })
+  const [activeTabId, setActiveTabId] = useState(() => {
+    return localStorage.getItem('zotshelf_active_tab') || null
+  })
+
+  // For settings modal - temporary selection before applying
+  const [tempSelectedCollection, setTempSelectedCollection] = useState(null)
+  const [tempSelectedTag, setTempSelectedTag] = useState('')
+
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [viewMode, setViewMode] = useState('selection') // 'selection', 'grid', or 'info'
@@ -40,6 +52,30 @@ function App() {
       document.documentElement.classList.remove('dark-mode')
     }
   }, [darkMode])
+
+  // Persist tabs to localStorage whenever they change
+  useEffect(() => {
+    if (tabs.length > 0) {
+      localStorage.setItem('zotshelf_tabs', JSON.stringify(tabs.map(tab => ({
+        id: tab.id,
+        collectionKey: tab.collectionKey,
+        collectionName: tab.collectionName,
+        tag: tab.tag
+        // Don't persist items to save storage space
+      }))))
+    } else {
+      localStorage.removeItem('zotshelf_tabs')
+    }
+  }, [tabs])
+
+  // Persist active tab
+  useEffect(() => {
+    if (activeTabId) {
+      localStorage.setItem('zotshelf_active_tab', activeTabId)
+    } else {
+      localStorage.removeItem('zotshelf_active_tab')
+    }
+  }, [activeTabId])
 
   useEffect(() => {
     // Check for OAuth callback
@@ -110,8 +146,8 @@ function App() {
     setApiKey(null)
     setUsername(null)
     setCollections([])
-    setSelectedCollection(null)
-    setItems([])
+    setTabs([])
+    setActiveTabId(null)
   }
 
   const loadCollections = async (uid, key) => {
@@ -121,16 +157,15 @@ function App() {
       const collections = await getCollections(uid || userId, key || apiKey)
       setCollections(collections)
 
-      // Restore previously selected collection
-      const savedCollectionKey = localStorage.getItem('selected_collection_key')
-      if (savedCollectionKey) {
-        const savedCollection = collections.find(c => c.key === savedCollectionKey)
-        if (savedCollection) {
-          setSelectedCollection(savedCollection)
-          // Load items for this collection and switch to grid view
-          await loadItems(savedCollection.key)
-          setViewMode('grid')
-        }
+      // Restore saved tabs if they exist
+      if (tabs.length > 0 && activeTabId) {
+        // Reload items for all tabs
+        const updatedTabs = await Promise.all(tabs.map(async (tab) => {
+          const items = await loadItemsForTab(tab.collectionKey, tab.tag, uid || userId, key || apiKey)
+          return { ...tab, items, loading: false }
+        }))
+        setTabs(updatedTabs)
+        setViewMode('grid')
       }
     } catch (err) {
       setError('Failed to load collections: ' + err.message)
@@ -139,16 +174,14 @@ function App() {
     }
   }
 
-  const loadItems = async (collectionKey, tag = '') => {
+  // Helper function to load items for a tab (doesn't set state)
+  const loadItemsForTab = async (collectionKey, tag = '', uid = null, key = null) => {
     try {
-      setLoading(true)
-      setError(null)
-
       let topLevelItems
       if (tag) {
-        topLevelItems = await getItemsByTag(userId, apiKey, tag, collectionKey)
+        topLevelItems = await getItemsByTag(uid || userId, key || apiKey, tag, collectionKey)
       } else if (collectionKey) {
-        topLevelItems = await getItemsInCollection(userId, apiKey, collectionKey)
+        topLevelItems = await getItemsInCollection(uid || userId, key || apiKey, collectionKey)
       }
 
       // Filter for regular items (not attachments or notes)
@@ -163,7 +196,7 @@ function App() {
       const itemsWithAttachments = []
       for (const item of limitedItems) {
         try {
-          const children = await getItemChildren(userId, apiKey, item.key)
+          const children = await getItemChildren(uid || userId, key || apiKey, item.key)
           const pdfEpubAttachments = children.filter(child =>
             child.data.itemType === 'attachment' &&
             (child.data.contentType === 'application/pdf' ||
@@ -183,28 +216,93 @@ function App() {
         }
       }
 
-      setItems(itemsWithAttachments)
+      return itemsWithAttachments
     } catch (err) {
-      setError('Failed to load items: ' + err.message)
-    } finally {
-      setLoading(false)
+      throw new Error('Failed to load items: ' + err.message)
+    }
+  }
+
+  // Tab management functions
+  const createNewTab = async (collection, tag = '') => {
+    const newTab = {
+      id: `tab-${Date.now()}`,
+      collectionKey: collection.key,
+      collectionName: collection.data.name,
+      tag: tag,
+      items: [],
+      loading: true
+    }
+
+    setTabs([...tabs, newTab])
+    setActiveTabId(newTab.id)
+
+    // Load items for the new tab
+    try {
+      const items = await loadItemsForTab(collection.key, tag)
+      setTabs(prevTabs => prevTabs.map(t =>
+        t.id === newTab.id ? { ...t, items, loading: false } : t
+      ))
+    } catch (err) {
+      setError(err.message)
+      setTabs(prevTabs => prevTabs.map(t =>
+        t.id === newTab.id ? { ...t, loading: false } : t
+      ))
+    }
+  }
+
+  const switchTab = (tabId) => {
+    setActiveTabId(tabId)
+  }
+
+  const closeTab = (tabId) => {
+    const tabIndex = tabs.findIndex(t => t.id === tabId)
+    const newTabs = tabs.filter(t => t.id !== tabId)
+    setTabs(newTabs)
+
+    // If closing the active tab, switch to another tab
+    if (tabId === activeTabId) {
+      if (newTabs.length > 0) {
+        // Switch to the tab before or after
+        const newActiveTab = newTabs[Math.max(0, tabIndex - 1)]
+        setActiveTabId(newActiveTab.id)
+      } else {
+        setActiveTabId(null)
+        setViewMode('selection')
+      }
+    }
+  }
+
+  const updateActiveTab = async (collection, tag = '') => {
+    if (!activeTabId) return
+
+    // Update the active tab with new collection/tag
+    setTabs(prevTabs => prevTabs.map(t =>
+      t.id === activeTabId
+        ? { ...t, collectionKey: collection.key, collectionName: collection.data.name, tag, loading: true }
+        : t
+    ))
+
+    // Load items for updated tab
+    try {
+      const items = await loadItemsForTab(collection.key, tag)
+      setTabs(prevTabs => prevTabs.map(t =>
+        t.id === activeTabId ? { ...t, items, loading: false } : t
+      ))
+    } catch (err) {
+      setError(err.message)
+      setTabs(prevTabs => prevTabs.map(t =>
+        t.id === activeTabId ? { ...t, loading: false } : t
+      ))
     }
   }
 
   const handleCollectionSelect = (collection) => {
-    setSelectedCollection(collection)
-    setSelectedTag('')
-
-    // Save to localStorage
-    if (collection) {
-      localStorage.setItem('selected_collection_key', collection.key)
-    } else {
-      localStorage.removeItem('selected_collection_key')
-    }
+    setTempSelectedCollection(collection)
+    setTempSelectedTag('')
   }
 
   const handleTagSelect = (tag) => {
-    setSelectedTag(tag)
+    setTempSelectedTag(tag)
   }
 
   const handleLinkTypeChange = (type) => {
@@ -223,16 +321,25 @@ function App() {
     localStorage.setItem('dark_mode', newMode.toString())
   }
 
+  const handleOpenSettings = () => {
+    // Initialize temp selection from active tab when opening settings
+    if (activeTab) {
+      const collection = collections.find(c => c.key === activeTab.collectionKey)
+      setTempSelectedCollection(collection || null)
+      setTempSelectedTag(activeTab.tag || '')
+    }
+    setShowSettings(true)
+  }
+
   const handleViewCollection = async () => {
-    if (!selectedCollection) {
+    if (!tempSelectedCollection) {
       setError('Please select a collection first')
       return
     }
 
-    // Load items and switch to grid view
-    await loadItems(selectedCollection.key, selectedTag)
+    // Create first tab and switch to grid view
+    await createNewTab(tempSelectedCollection, tempSelectedTag)
     setViewMode('grid')
-    setShowSettings(false)
   }
 
   const handleBackToSelection = () => {
@@ -240,8 +347,8 @@ function App() {
     setShowSettings(false)
   }
 
-  const handleApplySettings = async () => {
-    if (!selectedCollection) {
+  const handleApplySettings = async (action = 'update') => {
+    if (!tempSelectedCollection) {
       setError('Please select a collection first')
       return
     }
@@ -249,11 +356,13 @@ function App() {
     // Close modal immediately for better UX
     setShowSettings(false)
 
-    // Save to localStorage
-    localStorage.setItem('selected_collection_key', selectedCollection.key)
-
-    // Reload items with new selection
-    await loadItems(selectedCollection.key, selectedTag)
+    if (action === 'new-tab') {
+      // Create new tab
+      await createNewTab(tempSelectedCollection, tempSelectedTag)
+    } else {
+      // Update active tab
+      await updateActiveTab(tempSelectedCollection, tempSelectedTag)
+    }
   }
 
   if (!authenticated) {
@@ -286,10 +395,10 @@ function App() {
 
           <CollectionSelector
             collections={collections}
-            selectedCollection={selectedCollection}
+            selectedCollection={tempSelectedCollection}
             onCollectionSelect={handleCollectionSelect}
             onTagSelect={handleTagSelect}
-            selectedTag={selectedTag}
+            selectedTag={tempSelectedTag}
             onLogout={handleLogout}
             username={username}
           />
@@ -324,7 +433,7 @@ function App() {
           <div className="action-buttons">
             <button
               onClick={handleViewCollection}
-              disabled={!selectedCollection || loading}
+              disabled={!tempSelectedCollection || loading}
               className="view-collection-button"
             >
               {loading ? 'Loading...' : 'View Collection'}
@@ -402,16 +511,18 @@ function App() {
   }
 
   // Grid view - display covers with settings option
+  const activeTab = tabs.find(t => t.id === activeTabId)
+
   return (
     <div className="app grid-view">
       {/* Top bar with settings */}
       <div className="grid-view-header">
         <div className="header-left">
           <h1>ZotShelf</h1>
-          {selectedCollection && (
+          {activeTab && (
             <span className="current-collection">
-              {selectedCollection.data.name}
-              {selectedTag && ` • ${selectedTag}`}
+              {activeTab.collectionName}
+              {activeTab.tag && ` • ${activeTab.tag}`}
             </span>
           )}
         </div>
@@ -433,7 +544,7 @@ function App() {
             </svg>
             Info
           </button>
-          <button onClick={() => setShowSettings(!showSettings)} className="settings-button">
+          <button onClick={handleOpenSettings} className="settings-button">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
               <path d="M17.43 10.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C12.46 2.18 12.25 2 12 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM10 13c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3z"/>
             </svg>
@@ -445,20 +556,59 @@ function App() {
         </div>
       </div>
 
+      {/* Tabs bar */}
+      {tabs.length > 0 && (
+        <div className="tabs-bar">
+          <div className="tabs-container">
+            {tabs.map(tab => (
+              <div
+                key={tab.id}
+                className={`tab ${tab.id === activeTabId ? 'active' : ''}`}
+                onClick={() => switchTab(tab.id)}
+              >
+                <span className="tab-name">
+                  {tab.collectionName}
+                  {tab.tag && ` • ${tab.tag}`}
+                </span>
+                {tabs.length > 1 && (
+                  <button
+                    className="tab-close"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      closeTab(tab.id)
+                    }}
+                    title="Close tab"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+          <button
+            className="new-tab-button"
+            onClick={handleOpenSettings}
+            title="Open new tab"
+          >
+            +
+          </button>
+        </div>
+      )}
+
       {/* Settings panel (slides in from top or modal) */}
       {showSettings && (
         <div className="settings-panel">
           <div className="settings-content">
             <div className="settings-header">
-              <h3>Change Collection or Tag</h3>
+              <h3>{activeTab ? 'Change Collection or Open New Tab' : 'Open Collection'}</h3>
               <button onClick={() => setShowSettings(false)} className="close-button">×</button>
             </div>
             <CollectionSelector
               collections={collections}
-              selectedCollection={selectedCollection}
+              selectedCollection={tempSelectedCollection}
               onCollectionSelect={handleCollectionSelect}
               onTagSelect={handleTagSelect}
-              selectedTag={selectedTag}
+              selectedTag={tempSelectedTag}
               compact={true}
             />
 
@@ -499,9 +649,21 @@ function App() {
             </div>
 
             <div className="settings-actions">
-              <button onClick={handleApplySettings} className="apply-button">
-                Apply Changes
-              </button>
+              {activeTab && (
+                <>
+                  <button onClick={() => handleApplySettings('update')} className="apply-button">
+                    Update This Tab
+                  </button>
+                  <button onClick={() => handleApplySettings('new-tab')} className="apply-button new-tab-action">
+                    Open in New Tab
+                  </button>
+                </>
+              )}
+              {!activeTab && (
+                <button onClick={() => handleApplySettings('new-tab')} className="apply-button">
+                  Open Collection
+                </button>
+              )}
               <button onClick={() => setShowSettings(false)} className="cancel-button">
                 Cancel
               </button>
@@ -514,17 +676,26 @@ function App() {
       <div className="grid-container-full">
         {error && <div className="error-message">{error}</div>}
 
-        {loading && <div className="loading">Loading</div>}
+        {activeTab && activeTab.loading && <div className="loading">Loading</div>}
 
-        {!loading && items.length > 0 && (
-          <CoverGrid items={items} userId={userId} apiKey={apiKey} username={username} linkType={linkType} />
+        {activeTab && !activeTab.loading && activeTab.items.length > 0 && (
+          <CoverGrid items={activeTab.items} userId={userId} apiKey={apiKey} username={username} linkType={linkType} />
         )}
 
-        {!loading && items.length === 0 && (
+        {activeTab && !activeTab.loading && activeTab.items.length === 0 && (
           <div className="empty-state">
             <p>No items with PDF or EPUB attachments found in this collection</p>
-            <button onClick={() => setShowSettings(true)} className="change-collection-button">
+            <button onClick={handleOpenSettings} className="change-collection-button">
               Choose Different Collection
+            </button>
+          </div>
+        )}
+
+        {!activeTab && (
+          <div className="empty-state">
+            <p>No tabs open</p>
+            <button onClick={handleOpenSettings} className="change-collection-button">
+              Open Collection
             </button>
           </div>
         )}

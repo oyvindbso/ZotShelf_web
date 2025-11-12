@@ -184,6 +184,104 @@
   transform: none;
 }
 
+/* Tabs bar */
+.tabs-bar {
+  display: flex;
+  align-items: center;
+  background: white;
+  border-bottom: 1px solid #e1e8ed;
+  padding: 0 15px;
+  gap: 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.tabs-container {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  font-size: 15px;
+  color: #666;
+  min-width: 120px;
+}
+
+.tab:hover {
+  background: #f8f9fa;
+  color: #333;
+}
+
+.tab.active {
+  color: #667eea;
+  border-bottom-color: #667eea;
+  font-weight: 600;
+}
+
+.tab-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.tab-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #999;
+  cursor: pointer;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.tab-close:hover {
+  background: #fee;
+  color: #c33;
+}
+
+.new-tab-button {
+  background: transparent;
+  border: 2px solid #667eea;
+  color: #667eea;
+  font-size: 20px;
+  font-weight: bold;
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.new-tab-button:hover {
+  background: #667eea;
+  color: white;
+}
+
 /* Grid view styles */
 .grid-view {
   padding: 0;
@@ -588,6 +686,37 @@
 
   .grid-container-full {
     padding: 15px;
+  }
+
+  /* Mobile tabs */
+  .tabs-bar {
+    padding: 0 10px;
+  }
+
+  .tab {
+    padding: 10px 12px;
+    font-size: 14px;
+    min-width: 100px;
+  }
+
+  .tab-name {
+    max-width: 150px;
+  }
+
+  .new-tab-button {
+    width: 32px;
+    height: 32px;
+    font-size: 18px;
+  }
+
+  .settings-actions {
+    flex-direction: column;
+  }
+
+  .apply-button,
+  .new-tab-action,
+  .cancel-button {
+    width: 100%;
   }
 }
 
@@ -1032,4 +1161,66 @@
 
 .dark-mode .primary-button:hover {
   box-shadow: 0 6px 20px rgba(212, 175, 55, 0.6);
+}
+
+/* Dark mode tabs */
+.dark-mode .tabs-bar {
+  background: #252117;
+  border-bottom-color: #3a342a;
+}
+
+.dark-mode .tab {
+  color: #c9b896;
+}
+
+.dark-mode .tab:hover {
+  background: #1a1612;
+  color: #f5ecd7;
+}
+
+.dark-mode .tab.active {
+  color: #d4af37;
+  border-bottom-color: #d4af37;
+}
+
+.dark-mode .tab-close {
+  color: #c9b896;
+}
+
+.dark-mode .tab-close:hover {
+  background: #3a1a1a;
+  color: #ff6b6b;
+}
+
+.dark-mode .new-tab-button {
+  border-color: #d4af37;
+  color: #d4af37;
+}
+
+.dark-mode .new-tab-button:hover {
+  background: #d4af37;
+  color: #1a1612;
+}
+
+/* New tab action button in settings */
+.new-tab-action {
+  background: transparent !important;
+  border: 2px solid #667eea;
+  color: #667eea !important;
+}
+
+.new-tab-action:hover {
+  background: #667eea !important;
+  color: white !important;
+}
+
+.dark-mode .new-tab-action {
+  border-color: #d4af37;
+  color: #d4af37 !important;
+}
+
+.dark-mode .new-tab-action:hover {
+  background: transparent !important;
+  border-color: #c9a961;
+  color: #c9a961 !important;
 }

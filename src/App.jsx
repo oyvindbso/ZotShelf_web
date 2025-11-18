@@ -17,7 +17,16 @@ function App() {
   const [tabs, setTabs] = useState(() => {
     // Load saved tabs from localStorage
     const savedTabs = localStorage.getItem('zotshelf_tabs')
-    return savedTabs ? JSON.parse(savedTabs) : []
+    if (savedTabs) {
+      const parsed = JSON.parse(savedTabs)
+      // Ensure each tab has items and loading properties
+      return parsed.map(tab => ({
+        ...tab,
+        items: [],
+        loading: true
+      }))
+    }
+    return []
   })
   const [activeTabId, setActiveTabId] = useState(() => {
     return localStorage.getItem('zotshelf_active_tab') || null
@@ -29,7 +38,11 @@ function App() {
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [viewMode, setViewMode] = useState('selection') // 'selection', 'grid', or 'info'
+  const [viewMode, setViewMode] = useState(() => {
+    // If tabs exist, start in grid view; otherwise selection view
+    const savedTabs = localStorage.getItem('zotshelf_tabs')
+    return savedTabs && JSON.parse(savedTabs).length > 0 ? 'grid' : 'selection'
+  })
   const [showSettings, setShowSettings] = useState(false)
   const [linkType, setLinkType] = useState(() => {
     // Load saved link type preference

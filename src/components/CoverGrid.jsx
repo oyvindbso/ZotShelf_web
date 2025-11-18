@@ -16,7 +16,12 @@ function CoverItem({ item, userId, apiKey, displayFormat, username, linkType }) 
     // Use attachment key and version for cache key
     const key = item.attachment.key
     const version = item.attachment.version || item.attachment.data?.version || '0'
-    return `cover_${key}_${version}`
+    const cacheKey = `cover_${key}_${version}`
+    // Log the structure for debugging
+    if (!item.attachment.version) {
+      console.warn(`No version found for attachment ${key}, using: ${version}`, item.attachment)
+    }
+    return cacheKey
   }
 
   const getCachedCover = () => {

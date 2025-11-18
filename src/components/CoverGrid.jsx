@@ -10,17 +10,24 @@ function CoverItem({ item, userId, apiKey, displayFormat, username, linkType }) 
 
   useEffect(() => {
     loadCover()
-  }, [item])
+  }, [item.attachment.key, item.attachment.version]) // Use stable values instead of entire item object
 
   const getCacheKey = () => {
     // Use attachment key and version for cache key
-    return `cover_${item.attachment.key}_${item.attachment.version}`
+    const key = item.attachment.key
+    const version = item.attachment.version || item.attachment.data?.version || '0'
+    return `cover_${key}_${version}`
   }
 
   const getCachedCover = () => {
     try {
       const cacheKey = getCacheKey()
       const cached = localStorage.getItem(cacheKey)
+      if (cached) {
+        console.log(`Cache HIT for ${cacheKey}, size: ${cached.length} chars`)
+      } else {
+        console.log(`Cache MISS for ${cacheKey}`)
+      }
       return cached
     } catch (err) {
       console.error('Error reading from cache:', err)
@@ -38,6 +45,7 @@ function CoverItem({ item, userId, apiKey, displayFormat, username, linkType }) 
     try {
       const cacheKey = getCacheKey()
       localStorage.setItem(cacheKey, coverData)
+      console.log(`Cached cover: ${cacheKey}`)
     } catch (err) {
       // If localStorage is full, try to clear old covers
       console.warn('Cache full, attempting cleanup...')
@@ -115,12 +123,15 @@ function CoverItem({ item, userId, apiKey, displayFormat, username, linkType }) 
 
       let cover
       if (isPDF) {
+        console.log(`Extracting cover from PDF: ${attachment.key}`)
         cover = await extractCoverFromPDF(fileUrl, apiKey)
       } else if (isEPUB) {
+        console.log(`Extracting cover from EPUB: ${attachment.key}`)
         cover = await extractCoverFromEPUB(fileUrl, apiKey)
       }
 
       if (cover) {
+        console.log(`Cover extracted successfully for ${attachment.key}`)
         setCoverUrl(cover)
         setCachedCover(cover)
       } else {

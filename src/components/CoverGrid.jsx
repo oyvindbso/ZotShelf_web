@@ -7,6 +7,7 @@ function CoverItem({ item, userId, apiKey, displayFormat, username, linkType }) 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [errorType, setErrorType] = useState(null)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     loadCover()
@@ -198,6 +199,20 @@ function CoverItem({ item, userId, apiKey, displayFormat, username, linkType }) 
     }
   }
 
+  const handleCopyLink = async (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    const link = getZoteroLink()
+    try {
+      await navigator.clipboard.writeText(link)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error('Failed to copy link:', err)
+    }
+  }
+
   return (
     <a
       href={getZoteroLink()}
@@ -229,6 +244,23 @@ function CoverItem({ item, userId, apiKey, displayFormat, username, linkType }) 
         {coverUrl && !loading && (
           <img src={coverUrl} alt={getDisplayText()} className="cover-image" />
         )}
+
+        {/* Copy link button */}
+        <button
+          className="copy-link-button"
+          onClick={handleCopyLink}
+          title="Copy link"
+        >
+          {copied ? (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          ) : (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+          )}
+        </button>
       </div>
       <div className="cover-title">{getDisplayText()}</div>
     </a>

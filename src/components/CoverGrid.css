@@ -207,7 +207,7 @@
 
   /* Always show copy button on tablets and phones (no hover) */
   .copy-link-button {
-    opacity: 1;
+    opacity: 1 !important;
   }
 }
 
@@ -228,7 +228,7 @@
 
   /* Always show copy button on mobile (no hover) */
   .copy-link-button {
-    opacity: 1;
+    opacity: 1 !important;
     width: 28px;
     height: 28px;
     top: 6px;

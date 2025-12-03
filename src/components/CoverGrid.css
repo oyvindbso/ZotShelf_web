@@ -204,6 +204,11 @@
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     gap: 20px;
   }
+
+  /* Always show copy button on tablets and phones (no hover) */
+  .copy-link-button {
+    opacity: 1;
+  }
 }
 
 @media (max-width: 480px) {

@@ -100,7 +100,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0;
+  opacity: 1; /* Always visible by default (for touch devices) */
   transition: all 0.2s;
   z-index: 10;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -111,8 +111,15 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
-.cover-item:hover .copy-link-button {
-  opacity: 1;
+/* Only hide by default and show on hover for devices that support hover */
+@media (hover: hover) and (pointer: fine) {
+  .copy-link-button {
+    opacity: 0;
+  }
+
+  .cover-item:hover .copy-link-button {
+    opacity: 1;
+  }
 }
 
 .copy-link-button svg {
@@ -204,11 +211,6 @@
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     gap: 20px;
   }
-
-  /* Always show copy button on tablets and phones (no hover) */
-  .copy-link-button {
-    opacity: 1 !important;
-  }
 }
 
 @media (max-width: 480px) {
@@ -226,9 +228,8 @@
     margin-top: 8px;
   }
 
-  /* Always show copy button on mobile (no hover) */
+  /* Smaller copy button on small screens */
   .copy-link-button {
-    opacity: 1 !important;
     width: 28px;
     height: 28px;
     top: 6px;

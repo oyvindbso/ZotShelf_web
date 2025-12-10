@@ -138,34 +138,12 @@ function App() {
         setApiKey(auth.accessToken)
         setUsername(auth.username)
         setAuthenticated(true)
-        loadCollections(auth.userId, auth.accessToken)
         
-        // If we have cached tabs, only reload if they need refresh
-        // Otherwise they'll load from cache automatically
-        const needsReload = tabs.some(tab => tab.needsRefresh || (!tab.items || tab.items.length === 0))
-        if (needsReload) {
-          reloadAllTabs(auth.userId, auth.accessToken)
-        }
+        // Load collections but DON'T reload tabs - they're already loaded from cache
+        loadCollections(auth.userId, auth.accessToken, false)
       }
     }
   }, [])
-
-  const reloadAllTabs = async (uid, key) => {
-    // Reload items for all tabs that need it
-    const updatedTabs = await Promise.all(tabs.map(async (tab) => {
-      if (tab.needsRefresh || !tab.items || tab.items.length === 0) {
-        try {
-          const items = await loadItemsForTab(tab.collectionKey, tab.tag, uid, key)
-          return { ...tab, items, loading: false, needsRefresh: false }
-        } catch (err) {
-          console.error(`Error reloading tab ${tab.id}:`, err)
-          return { ...tab, loading: false }
-        }
-      }
-      return tab
-    }))
-    setTabs(updatedTabs)
-  }
 
   const handleOAuthCallback = async (oauthToken, oauthVerifier) => {
     try {
@@ -198,7 +176,7 @@ function App() {
       setAuthenticated(true)
 
       // Load collections
-      await loadCollections(userId, accessToken)
+      await loadCollections(userId, accessToken, false)
 
     } catch (err) {
       setError('Authentication failed: ' + err.message)
@@ -227,20 +205,39 @@ function App() {
     setActiveTabId(null)
   }
 
-  const loadCollections = async (uid, key) => {
+  const loadCollections = async (uid, key, shouldReloadTabs = false) => {
     try {
       setLoading(true)
       setError(null)
       const collections = await getCollections(uid || userId, key || apiKey)
       setCollections(collections)
 
-      // Tabs with cached data will already be displayed
-      // No need to reload them here unless they're missing data
+      // Only reload tabs if explicitly requested (e.g., after OAuth or manual refresh)
+      if (shouldReloadTabs) {
+        await reloadAllTabs(uid || userId, key || apiKey)
+      }
     } catch (err) {
       setError('Failed to load collections: ' + err.message)
     } finally {
       setLoading(false)
     }
+  }
+
+  const reloadAllTabs = async (uid, key) => {
+    // Reload items for all tabs that need it
+    const updatedTabs = await Promise.all(tabs.map(async (tab) => {
+      if (tab.needsRefresh || !tab.items || tab.items.length === 0) {
+        try {
+          const items = await loadItemsForTab(tab.collectionKey, tab.tag, uid, key)
+          return { ...tab, items, loading: false, needsRefresh: false }
+        } catch (err) {
+          console.error(`Error reloading tab ${tab.id}:`, err)
+          return { ...tab, loading: false }
+        }
+      }
+      return tab
+    }))
+    setTabs(updatedTabs)
   }
 
   // Helper function to load items for a tab (doesn't set state)

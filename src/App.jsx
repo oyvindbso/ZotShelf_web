@@ -19,12 +19,16 @@ function App() {
     const savedTabs = localStorage.getItem('zotshelf_tabs')
     if (savedTabs) {
       const parsed = JSON.parse(savedTabs)
-      // Ensure each tab has items and loading properties
-      return parsed.map(tab => ({
-        ...tab,
-        items: [],
-        loading: true
-      }))
+      // Load cached items if available
+      return parsed.map(tab => {
+        const cachedItems = localStorage.getItem(`zotshelf_items_${tab.id}`)
+        return {
+          ...tab,
+          items: cachedItems ? JSON.parse(cachedItems) : [],
+          loading: !cachedItems, // Only show loading if no cached items
+          needsRefresh: false
+        }
+      })
     }
     return []
   })
@@ -69,13 +73,26 @@ function App() {
   // Persist tabs to localStorage whenever they change
   useEffect(() => {
     if (tabs.length > 0) {
+      // Save tab metadata
       localStorage.setItem('zotshelf_tabs', JSON.stringify(tabs.map(tab => ({
         id: tab.id,
         collectionKey: tab.collectionKey,
         collectionName: tab.collectionName,
         tag: tab.tag
-        // Don't persist items to save storage space
       }))))
+      
+      // Save items for each tab separately
+      tabs.forEach(tab => {
+        if (tab.items && tab.items.length > 0) {
+          try {
+            localStorage.setItem(`zotshelf_items_${tab.id}`, JSON.stringify(tab.items))
+          } catch (err) {
+            console.warn(`Failed to cache items for tab ${tab.id}:`, err)
+            // If storage is full, try to clear old cached items
+            clearOldTabCache(tab.id)
+          }
+        }
+      })
     } else {
       localStorage.removeItem('zotshelf_tabs')
     }
@@ -89,6 +106,21 @@ function App() {
       localStorage.removeItem('zotshelf_active_tab')
     }
   }, [activeTabId])
+
+  // Clear cached items for closed tabs
+  const clearOldTabCache = (keepTabId) => {
+    const allKeys = Object.keys(localStorage)
+    const itemCacheKeys = allKeys.filter(key => key.startsWith('zotshelf_items_'))
+    const currentTabIds = tabs.map(t => t.id)
+    
+    itemCacheKeys.forEach(key => {
+      const tabId = key.replace('zotshelf_items_', '')
+      if (tabId !== keepTabId && !currentTabIds.includes(tabId)) {
+        localStorage.removeItem(key)
+        console.log(`Cleared old cache for tab: ${tabId}`)
+      }
+    })
+  }
 
   useEffect(() => {
     // Check for OAuth callback
@@ -107,9 +139,33 @@ function App() {
         setUsername(auth.username)
         setAuthenticated(true)
         loadCollections(auth.userId, auth.accessToken)
+        
+        // If we have cached tabs, only reload if they need refresh
+        // Otherwise they'll load from cache automatically
+        const needsReload = tabs.some(tab => tab.needsRefresh || (!tab.items || tab.items.length === 0))
+        if (needsReload) {
+          reloadAllTabs(auth.userId, auth.accessToken)
+        }
       }
     }
   }, [])
+
+  const reloadAllTabs = async (uid, key) => {
+    // Reload items for all tabs that need it
+    const updatedTabs = await Promise.all(tabs.map(async (tab) => {
+      if (tab.needsRefresh || !tab.items || tab.items.length === 0) {
+        try {
+          const items = await loadItemsForTab(tab.collectionKey, tab.tag, uid, key)
+          return { ...tab, items, loading: false, needsRefresh: false }
+        } catch (err) {
+          console.error(`Error reloading tab ${tab.id}:`, err)
+          return { ...tab, loading: false }
+        }
+      }
+      return tab
+    }))
+    setTabs(updatedTabs)
+  }
 
   const handleOAuthCallback = async (oauthToken, oauthVerifier) => {
     try {
@@ -153,7 +209,15 @@ function App() {
   }
 
   const handleLogout = () => {
+    // Clear all cached data
     clearAuth()
+    const allKeys = Object.keys(localStorage)
+    allKeys.forEach(key => {
+      if (key.startsWith('zotshelf_items_')) {
+        localStorage.removeItem(key)
+      }
+    })
+    
     setAuthenticated(false)
     setUserId(null)
     setApiKey(null)
@@ -170,16 +234,8 @@ function App() {
       const collections = await getCollections(uid || userId, key || apiKey)
       setCollections(collections)
 
-      // Restore saved tabs if they exist
-      if (tabs.length > 0 && activeTabId) {
-        // Reload items for all tabs
-        const updatedTabs = await Promise.all(tabs.map(async (tab) => {
-          const items = await loadItemsForTab(tab.collectionKey, tab.tag, uid || userId, key || apiKey)
-          return { ...tab, items, loading: false }
-        }))
-        setTabs(updatedTabs)
-        setViewMode('grid')
-      }
+      // Tabs with cached data will already be displayed
+      // No need to reload them here unless they're missing data
     } catch (err) {
       setError('Failed to load collections: ' + err.message)
     } finally {
@@ -243,7 +299,8 @@ function App() {
       collectionName: collection.data.name,
       tag: tag,
       items: [],
-      loading: true
+      loading: true,
+      needsRefresh: false
     }
 
     setTabs([...tabs, newTab])
@@ -271,6 +328,9 @@ function App() {
     const tabIndex = tabs.findIndex(t => t.id === tabId)
     const newTabs = tabs.filter(t => t.id !== tabId)
     setTabs(newTabs)
+    
+    // Clear cached items for this tab
+    localStorage.removeItem(`zotshelf_items_${tabId}`)
 
     // If closing the active tab, switch to another tab
     if (tabId === activeTabId) {
@@ -300,6 +360,31 @@ function App() {
       const items = await loadItemsForTab(collection.key, tag)
       setTabs(prevTabs => prevTabs.map(t =>
         t.id === activeTabId ? { ...t, items, loading: false } : t
+      ))
+    } catch (err) {
+      setError(err.message)
+      setTabs(prevTabs => prevTabs.map(t =>
+        t.id === activeTabId ? { ...t, loading: false } : t
+      ))
+    }
+  }
+
+  const refreshActiveTab = async () => {
+    if (!activeTabId) return
+    
+    const activeTab = tabs.find(t => t.id === activeTabId)
+    if (!activeTab) return
+
+    // Set loading state
+    setTabs(prevTabs => prevTabs.map(t =>
+      t.id === activeTabId ? { ...t, loading: true } : t
+    ))
+
+    // Reload items
+    try {
+      const items = await loadItemsForTab(activeTab.collectionKey, activeTab.tag)
+      setTabs(prevTabs => prevTabs.map(t =>
+        t.id === activeTabId ? { ...t, items, loading: false, needsRefresh: false } : t
       ))
     } catch (err) {
       setError(err.message)
@@ -486,7 +571,7 @@ function App() {
               <li>Automatic cover extraction from PDF and EPUB files</li>
               <li>Customizable display formats (Author-Title, Author Only, Title Only)</li>
               <li>Toggle between Zotero app links and web library links</li>
-              <li>Persistent collection selection</li>
+              <li>Persistent tabs and cached data for instant loading</li>
             </ul>
 
             <h3>How to Use</h3>
@@ -496,6 +581,7 @@ function App() {
               <li>Click "View Collection" to see your book covers</li>
               <li>Click any cover to open it in Zotero (app or web, based on your settings)</li>
               <li>Use the Settings button to change collections or preferences</li>
+              <li>Use the Refresh button to update data from Zotero</li>
             </ol>
 
             <h3>Link Types</h3>
@@ -540,6 +626,11 @@ function App() {
           )}
         </div>
         <div className="header-right">
+          <button onClick={refreshActiveTab} className="refresh-button" title="Refresh from Zotero" disabled={!activeTab || activeTab.loading}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </button>
           <button onClick={handleDarkModeToggle} className="dark-mode-toggle" title={darkMode ? "Light mode" : "Dark mode"}>
             {darkMode ? (
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">

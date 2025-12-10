@@ -11,29 +11,19 @@ function CoverItem({ item, userId, apiKey, displayFormat, username, linkType }) 
 
   useEffect(() => {
     loadCover()
-  }, [item.attachment.key, item.attachment.version]) // Use stable values instead of entire item object
+  }, []) // Remove dependencies to prevent re-running on prop changes
 
   const getCacheKey = () => {
     // Use attachment key and version for cache key
     const key = item.attachment.key
     const version = item.attachment.version || item.attachment.data?.version || '0'
-    const cacheKey = `cover_${key}_${version}`
-    // Log the structure for debugging
-    if (!item.attachment.version) {
-      console.warn(`No version found for attachment ${key}, using: ${version}`, item.attachment)
-    }
-    return cacheKey
+    return `cover_${key}_${version}`
   }
 
   const getCachedCover = () => {
     try {
       const cacheKey = getCacheKey()
       const cached = localStorage.getItem(cacheKey)
-      if (cached) {
-        console.log(`Cache HIT for ${cacheKey}, size: ${cached.length} chars`)
-      } else {
-        console.log(`Cache MISS for ${cacheKey}`)
-      }
       return cached
     } catch (err) {
       console.error('Error reading from cache:', err)
@@ -51,23 +41,18 @@ function CoverItem({ item, userId, apiKey, displayFormat, username, linkType }) 
     try {
       const cacheKey = getCacheKey()
       localStorage.setItem(cacheKey, coverData)
-      console.log(`Cached cover: ${cacheKey}`)
     } catch (err) {
       // If localStorage is full, try to clear old covers
       console.warn('Cache full, attempting cleanup...')
       try {
-        clearOldCovers(5) // More aggressive - remove 5 oldest
+        clearOldCovers(5)
         localStorage.setItem(getCacheKey(), coverData)
-        console.log('Successfully cached after cleanup')
       } catch (retryErr) {
-        // Still failed, clear all covers and try once more
         console.warn('Still full, clearing all cover cache...')
         try {
           clearAllCovers()
           localStorage.setItem(getCacheKey(), coverData)
-          console.log('Successfully cached after full cleanup')
         } catch (finalErr) {
-          // Give up - user has too much other data in localStorage
           console.error('Cannot cache - localStorage full:', finalErr.message)
         }
       }
@@ -84,10 +69,8 @@ function CoverItem({ item, userId, apiKey, displayFormat, username, linkType }) 
       }
     }
 
-    // Sort by key (which includes timestamp-like data) and remove oldest
     coverKeys.sort()
     const toRemove = Math.min(count, coverKeys.length)
-    console.log(`Removing ${toRemove} old covers from cache`)
 
     for (let i = 0; i < toRemove; i++) {
       localStorage.removeItem(coverKeys[i])
@@ -103,23 +86,23 @@ function CoverItem({ item, userId, apiKey, displayFormat, username, linkType }) 
         coverKeys.push(key)
       }
     }
-    console.log(`Clearing all ${coverKeys.length} covers from cache`)
     coverKeys.forEach(key => localStorage.removeItem(key))
   }
 
   const loadCover = async () => {
+    // Check cache first BEFORE setting any state
+    const cached = getCachedCover()
+    if (cached) {
+      setCoverUrl(cached)
+      setLoading(false)
+      return
+    }
+
+    // Only set loading state if we need to extract
     try {
       setLoading(true)
       setError(false)
       setErrorType(null)
-
-      // Check cache first
-      const cached = getCachedCover()
-      if (cached) {
-        setCoverUrl(cached)
-        setLoading(false)
-        return
-      }
 
       // Use the attachment for the cover
       const attachment = item.attachment
@@ -129,15 +112,12 @@ function CoverItem({ item, userId, apiKey, displayFormat, username, linkType }) 
 
       let cover
       if (isPDF) {
-        console.log(`Extracting cover from PDF: ${attachment.key}`)
         cover = await extractCoverFromPDF(fileUrl, apiKey)
       } else if (isEPUB) {
-        console.log(`Extracting cover from EPUB: ${attachment.key}`)
         cover = await extractCoverFromEPUB(fileUrl, apiKey)
       }
 
       if (cover) {
-        console.log(`Cover extracted successfully for ${attachment.key}`)
         setCoverUrl(cover)
         setCachedCover(cover)
       } else {
@@ -281,15 +261,14 @@ function CoverGrid({ items, userId, apiKey, username, linkType }) {
   const getAuthorLastName = (item) => {
     const creators = item.data.creators || []
     const authors = creators.filter(c => c.creatorType === 'author')
-    if (authors.length === 0) return 'zzz' // Sort items without authors last
+    if (authors.length === 0) return 'zzz'
     return (authors[0].lastName || authors[0].name || 'zzz').toLowerCase()
   }
 
   const getYear = (item) => {
     const date = item.data.date || ''
-    // Extract year from date string (e.g., "2020", "2020-01-01", "January 2020")
     const yearMatch = date.match(/\d{4}/)
-    return yearMatch ? parseInt(yearMatch[0]) : 9999 // Sort items without year last
+    return yearMatch ? parseInt(yearMatch[0]) : 9999
   }
 
   const getTitle = (item) => {
@@ -306,7 +285,7 @@ function CoverGrid({ items, userId, apiKey, username, linkType }) {
       case 'year':
         const yearA = getYear(a)
         const yearB = getYear(b)
-        return yearB - yearA // Newest first
+        return yearB - yearA
 
       case 'title':
       default:

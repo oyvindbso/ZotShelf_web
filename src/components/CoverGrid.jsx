@@ -3,33 +3,43 @@ import './CoverGrid.css'
 import { extractCoverFromPDF, extractCoverFromEPUB } from '../utils/coverExtractor'
 
 function CoverItem({ item, userId, apiKey, displayFormat, username, linkType }) {
-  const [coverUrl, setCoverUrl] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(false)
-  const [errorType, setErrorType] = useState(null)
-  const [copied, setCopied] = useState(false)
-
-  useEffect(() => {
-    loadCover()
-  }, []) // Remove dependencies to prevent re-running on prop changes
-
+  // Helper to get cache key - defined first so it can be used in useState initializers
   const getCacheKey = () => {
-    // Use attachment key and version for cache key
     const key = item.attachment.key
     const version = item.attachment.version || item.attachment.data?.version || '0'
     return `cover_${key}_${version}`
   }
 
-  const getCachedCover = () => {
+  // Check cache SYNCHRONOUSLY during initialization to avoid loading flash
+  const [coverUrl, setCoverUrl] = useState(() => {
     try {
       const cacheKey = getCacheKey()
-      const cached = localStorage.getItem(cacheKey)
-      return cached
-    } catch (err) {
-      console.error('Error reading from cache:', err)
+      return localStorage.getItem(cacheKey)
+    } catch {
       return null
     }
-  }
+  })
+
+  // Only show loading if we don't have a cached cover
+  const [loading, setLoading] = useState(() => {
+    try {
+      const cacheKey = getCacheKey()
+      return !localStorage.getItem(cacheKey)
+    } catch {
+      return true
+    }
+  })
+
+  const [error, setError] = useState(false)
+  const [errorType, setErrorType] = useState(null)
+  const [copied, setCopied] = useState(false)
+
+  // Only load cover if not already cached (cache was checked synchronously above)
+  useEffect(() => {
+    if (!coverUrl) {
+      loadCover()
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const setCachedCover = (coverData) => {
     // Don't cache if data is too large (> 500KB base64)
@@ -90,15 +100,8 @@ function CoverItem({ item, userId, apiKey, displayFormat, username, linkType }) 
   }
 
   const loadCover = async () => {
-    // Check cache first BEFORE setting any state
-    const cached = getCachedCover()
-    if (cached) {
-      setCoverUrl(cached)
-      setLoading(false)
-      return
-    }
-
-    // Only set loading state if we need to extract
+    // Cache was already checked synchronously during initialization
+    // This function is only called if we need to extract the cover
     try {
       setLoading(true)
       setError(false)

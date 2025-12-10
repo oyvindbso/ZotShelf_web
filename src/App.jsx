@@ -15,13 +15,17 @@ function App() {
 
   // Tabs state - each tab represents a collection view
   const [tabs, setTabs] = useState(() => {
+    console.log('🔄 Initializing tabs from localStorage...')
     // Load saved tabs from localStorage
     const savedTabs = localStorage.getItem('zotshelf_tabs')
     if (savedTabs) {
       const parsed = JSON.parse(savedTabs)
+      console.log(`✅ Found ${parsed.length} saved tabs`)
       // Load cached items if available
-      return parsed.map(tab => {
+      const restoredTabs = parsed.map(tab => {
         const cachedItems = localStorage.getItem(`zotshelf_items_${tab.id}`)
+        const itemCount = cachedItems ? JSON.parse(cachedItems).length : 0
+        console.log(`   Tab "${tab.collectionName}": ${itemCount} cached items`)
         return {
           ...tab,
           items: cachedItems ? JSON.parse(cachedItems) : [],
@@ -29,11 +33,16 @@ function App() {
           needsRefresh: false
         }
       })
+      return restoredTabs
     }
+    console.log('❌ No saved tabs found')
     return []
   })
+  
   const [activeTabId, setActiveTabId] = useState(() => {
-    return localStorage.getItem('zotshelf_active_tab') || null
+    const saved = localStorage.getItem('zotshelf_active_tab')
+    console.log(`🎯 Active tab ID: ${saved}`)
+    return saved || null
   })
 
   // For settings modal - temporary selection before applying
@@ -45,7 +54,9 @@ function App() {
   const [viewMode, setViewMode] = useState(() => {
     // If tabs exist, start in grid view; otherwise selection view
     const savedTabs = localStorage.getItem('zotshelf_tabs')
-    return savedTabs && JSON.parse(savedTabs).length > 0 ? 'grid' : 'selection'
+    const mode = savedTabs && JSON.parse(savedTabs).length > 0 ? 'grid' : 'selection'
+    console.log(`📺 View mode: ${mode}`)
+    return mode
   })
   const [showSettings, setShowSettings] = useState(false)
   const [linkType, setLinkType] = useState(() => {
@@ -72,6 +83,7 @@ function App() {
 
   // Persist tabs to localStorage whenever they change
   useEffect(() => {
+    console.log('💾 Tabs changed, persisting to localStorage...')
     if (tabs.length > 0) {
       // Save tab metadata
       localStorage.setItem('zotshelf_tabs', JSON.stringify(tabs.map(tab => ({
@@ -86,8 +98,9 @@ function App() {
         if (tab.items && tab.items.length > 0) {
           try {
             localStorage.setItem(`zotshelf_items_${tab.id}`, JSON.stringify(tab.items))
+            console.log(`   ✅ Cached ${tab.items.length} items for tab "${tab.collectionName}"`)
           } catch (err) {
-            console.warn(`Failed to cache items for tab ${tab.id}:`, err)
+            console.warn(`   ❌ Failed to cache items for tab ${tab.id}:`, err)
             // If storage is full, try to clear old cached items
             clearOldTabCache(tab.id)
           }
@@ -95,6 +108,7 @@ function App() {
       })
     } else {
       localStorage.removeItem('zotshelf_tabs')
+      console.log('   ℹ️ No tabs to persist')
     }
   }, [tabs])
 
@@ -117,30 +131,36 @@ function App() {
       const tabId = key.replace('zotshelf_items_', '')
       if (tabId !== keepTabId && !currentTabIds.includes(tabId)) {
         localStorage.removeItem(key)
-        console.log(`Cleared old cache for tab: ${tabId}`)
+        console.log(`🗑️ Cleared old cache for tab: ${tabId}`)
       }
     })
   }
 
   useEffect(() => {
+    console.log('🚀 App mounting...')
     // Check for OAuth callback
     const urlParams = new URLSearchParams(window.location.search)
     const oauthToken = urlParams.get('oauth_token')
     const oauthVerifier = urlParams.get('oauth_verifier')
 
     if (oauthToken && oauthVerifier) {
+      console.log('🔐 OAuth callback detected')
       handleOAuthCallback(oauthToken, oauthVerifier)
     } else {
       // Check if already authenticated
       if (isAuthenticated()) {
+        console.log('✅ User is authenticated')
         const auth = getStoredAuth()
         setUserId(auth.userId)
         setApiKey(auth.accessToken)
         setUsername(auth.username)
         setAuthenticated(true)
         
+        console.log('📚 Loading collections (not reloading tabs)...')
         // Load collections but DON'T reload tabs - they're already loaded from cache
         loadCollections(auth.userId, auth.accessToken, false)
+      } else {
+        console.log('❌ User not authenticated')
       }
     }
   }, [])
@@ -187,6 +207,7 @@ function App() {
   }
 
   const handleLogout = () => {
+    console.log('👋 Logging out, clearing all cached data')
     // Clear all cached data
     clearAuth()
     const allKeys = Object.keys(localStorage)
@@ -209,14 +230,20 @@ function App() {
     try {
       setLoading(true)
       setError(null)
+      console.log(`📥 Fetching collections from API...`)
       const collections = await getCollections(uid || userId, key || apiKey)
+      console.log(`✅ Loaded ${collections.length} collections`)
       setCollections(collections)
 
       // Only reload tabs if explicitly requested (e.g., after OAuth or manual refresh)
       if (shouldReloadTabs) {
+        console.log('🔄 Reloading all tabs from API...')
         await reloadAllTabs(uid || userId, key || apiKey)
+      } else {
+        console.log('⏭️ Skipping tab reload (using cached data)')
       }
     } catch (err) {
+      console.error('❌ Failed to load collections:', err)
       setError('Failed to load collections: ' + err.message)
     } finally {
       setLoading(false)
@@ -224,17 +251,21 @@ function App() {
   }
 
   const reloadAllTabs = async (uid, key) => {
+    console.log('🔄 Starting reload of all tabs...')
     // Reload items for all tabs that need it
     const updatedTabs = await Promise.all(tabs.map(async (tab) => {
       if (tab.needsRefresh || !tab.items || tab.items.length === 0) {
+        console.log(`   🔄 Reloading tab "${tab.collectionName}"...`)
         try {
           const items = await loadItemsForTab(tab.collectionKey, tab.tag, uid, key)
+          console.log(`   ✅ Loaded ${items.length} items`)
           return { ...tab, items, loading: false, needsRefresh: false }
         } catch (err) {
-          console.error(`Error reloading tab ${tab.id}:`, err)
+          console.error(`   ❌ Error reloading tab ${tab.id}:`, err)
           return { ...tab, loading: false }
         }
       }
+      console.log(`   ⏭️ Skipping tab "${tab.collectionName}" (has cached items)`)
       return tab
     }))
     setTabs(updatedTabs)
@@ -290,6 +321,7 @@ function App() {
 
   // Tab management functions
   const createNewTab = async (collection, tag = '') => {
+    console.log(`➕ Creating new tab for "${collection.data.name}"...`)
     const newTab = {
       id: `tab-${Date.now()}`,
       collectionKey: collection.key,
@@ -306,10 +338,12 @@ function App() {
     // Load items for the new tab
     try {
       const items = await loadItemsForTab(collection.key, tag)
+      console.log(`✅ Loaded ${items.length} items for new tab`)
       setTabs(prevTabs => prevTabs.map(t =>
         t.id === newTab.id ? { ...t, items, loading: false } : t
       ))
     } catch (err) {
+      console.error('❌ Error loading items for new tab:', err)
       setError(err.message)
       setTabs(prevTabs => prevTabs.map(t =>
         t.id === newTab.id ? { ...t, loading: false } : t
@@ -318,10 +352,12 @@ function App() {
   }
 
   const switchTab = (tabId) => {
+    console.log(`🔀 Switching to tab: ${tabId}`)
     setActiveTabId(tabId)
   }
 
   const closeTab = (tabId) => {
+    console.log(`❌ Closing tab: ${tabId}`)
     const tabIndex = tabs.findIndex(t => t.id === tabId)
     const newTabs = tabs.filter(t => t.id !== tabId)
     setTabs(newTabs)
@@ -344,6 +380,7 @@ function App() {
 
   const updateActiveTab = async (collection, tag = '') => {
     if (!activeTabId) return
+    console.log(`🔄 Updating active tab with "${collection.data.name}"...`)
 
     // Update the active tab with new collection/tag
     setTabs(prevTabs => prevTabs.map(t =>
@@ -355,10 +392,12 @@ function App() {
     // Load items for updated tab
     try {
       const items = await loadItemsForTab(collection.key, tag)
+      console.log(`✅ Loaded ${items.length} items for updated tab`)
       setTabs(prevTabs => prevTabs.map(t =>
         t.id === activeTabId ? { ...t, items, loading: false } : t
       ))
     } catch (err) {
+      console.error('❌ Error updating tab:', err)
       setError(err.message)
       setTabs(prevTabs => prevTabs.map(t =>
         t.id === activeTabId ? { ...t, loading: false } : t
@@ -372,6 +411,8 @@ function App() {
     const activeTab = tabs.find(t => t.id === activeTabId)
     if (!activeTab) return
 
+    console.log(`🔄 Manually refreshing tab "${activeTab.collectionName}"...`)
+
     // Set loading state
     setTabs(prevTabs => prevTabs.map(t =>
       t.id === activeTabId ? { ...t, loading: true } : t
@@ -380,10 +421,12 @@ function App() {
     // Reload items
     try {
       const items = await loadItemsForTab(activeTab.collectionKey, activeTab.tag)
+      console.log(`✅ Refreshed ${items.length} items`)
       setTabs(prevTabs => prevTabs.map(t =>
         t.id === activeTabId ? { ...t, items, loading: false, needsRefresh: false } : t
       ))
     } catch (err) {
+      console.error('❌ Error refreshing tab:', err)
       setError(err.message)
       setTabs(prevTabs => prevTabs.map(t =>
         t.id === activeTabId ? { ...t, loading: false } : t
@@ -579,6 +622,7 @@ function App() {
               <li>Click any cover to open it in Zotero (app or web, based on your settings)</li>
               <li>Use the Settings button to change collections or preferences</li>
               <li>Use the Refresh button to update data from Zotero</li>
+              <li>Check browser console for debugging info (press F12)</li>
             </ol>
 
             <h3>Link Types</h3>
@@ -608,6 +652,8 @@ function App() {
 
   // Grid view - display covers with settings option
   const activeTab = tabs.find(t => t.id === activeTabId)
+
+  console.log(`📊 Rendering grid view. Active tab:`, activeTab ? `"${activeTab.collectionName}" with ${activeTab.items?.length || 0} items` : 'none')
 
   return (
     <div className="app grid-view">
